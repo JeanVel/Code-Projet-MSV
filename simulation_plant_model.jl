@@ -10,29 +10,27 @@ using Distributions
 
 # Paramètres de simulation : 
 T = 10.0
-NX_0 = 300  # Nombre initial de particules X
-NY_0 = 30  # Nombre initial de particules Y
-NZ_0 = 10  # Nombre initial de particules Z
+NX_0 = 10  # Nombre initial de particules X
+NY_0 = 3  # Nombre initial de particules Y
+NZ_0 = 4  # Nombre initial de particules Z
 dom = 1.0  # Domaine de simulation
 lamb = 0.1  # Paramètre de mort de la particule X
-P = 50.  # Paramètre de précipitation
+P = 1000.  # Paramètre de précipitation
 K = 0.001  # Paramètre de saturation
 L = 0.01  # Paramètre d'évaporation
-alpha = 30.  # Paramètre d'infiltration dans le sous sol
-C = [lamb+30, L+10, alpha*10]  # Majorants de l'intensité du processus de poisson
+alpha = 100.  # Paramètre d'infiltration dans le sous sol
+C = [lamb+10., 10/K , L+10, alpha*10]  # Majorants de l'intensité du processus de poisson
 rG = 1.  # Rayon de voisinage pour la densité de particules Y
 rc = [0.1, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
-diff = [1.5,1.,1.2] #paramètres de diffusion pour chaque type de particules
+diff = [3,1.,1.2] #paramètres de diffusion pour chaque type de particules
 
 # Initialisation des positions
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
 
 X0=[X_x0 ,Y_x0, Z_x0]
 Y0=[X_y0 ,Y_y0, Z_y0]
 
-
-
-sim_plant=simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=1000)
+sim_plant=simulate_plant(T, X0, Y0, lamb, P, K, L,I, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=1000)
 
 #print nombre de naissances et de morts pour chaque type de particules
 println("naissances plantes: ", sim_plant[8], "\n")
