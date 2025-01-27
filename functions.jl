@@ -181,20 +181,34 @@ function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particu
 end
 
 function init(NX_0, NY_0, NZ_0, dom)
-    #NX_ 0 particules X aléatoirement sur [dom , dom]
+    # NX_0 particules X aléatoirement sur [dom , dom]
     X_x0 = rand(NX_0) .* 2*dom .- dom
     X_y0 = rand(NX_0) .* 2*dom .- dom
 
-    #NY_0 particules Y aléatoirement sur [dom , dom]
+    # NY_0 particules Y aléatoirement sur [dom , dom]
     Y_x0 = rand(NY_0) .* 2*dom .- dom
     Y_y0 = rand(NY_0) .* 2*dom .- dom
 
-    #NZ_0 particules Z aléatoirement sur [dom , dom]
+    # NZ_0 particules Z aléatoirement sur [dom , dom]
     Z_x0 = rand(NZ_0) .* 2*dom .- dom
     Z_y0 = rand(NZ_0) .* 2*dom .- dom
 
     return X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0
 end
+
+
+function two_circular_patch_initialization(nb_plant_particles, nb_ground_water_particles, nb_surface_water_particles,
+    position_1, radius_1, position_2, radius_2)
+    
+
+end
+
+
+function elliptic_patch_initialization(nb_plant_particles, nb_ground_water_particles, nb_surface_water_particles,
+    position, a, b)
+
+end
+
 
 function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=2000)
     # Initialisation des positions des particules
@@ -250,7 +264,6 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1.,
             println("niter :",niter)
             break
         end
-
 
 
         dB_Xx, dB_Xy  = diff[1]*sqrt(2 * tau) * randn(NX_t), diff[1]*sqrt(2 * tau) * randn(NX_t) # Incréments browniens de taille Nt
@@ -356,7 +369,6 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1.,
             push!(positions_Xx[end], x_new)
             push!(positions_Xy[end], y_new)
             naissances_X += 1
-
 
 
         elseif Zx > a_x && Zx <= b_x  # Mort
