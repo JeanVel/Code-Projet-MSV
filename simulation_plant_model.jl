@@ -10,9 +10,9 @@ using Distributions
 
 # Paramètres de simulation : 
 T = 10.0
-NX_0 = 10  # Nombre initial de particules X
-NY_0 = 3  # Nombre initial de particules Y
-NZ_0 = 4  # Nombre initial de particules Z
+NX_0 = 100  # Nombre initial de particules X
+NY_0 = 30  # Nombre initial de particules Y
+NZ_0 = 40  # Nombre initial de particules Z
 dom = 1.0  # Domaine de simulation
 lamb = 0.1  # Paramètre de mort de la particule X
 P = 1000.  # Paramètre de précipitation
@@ -26,7 +26,7 @@ diff = [3,1.,1.2] #paramètres de diffusion pour chaque type de particules
 
 # Initialisation des positions
 # X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (0., 0.), 0.5)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), 0.5)
 
 X0=[X_x0 ,Y_x0, Z_x0]
 Y0=[X_y0 ,Y_y0, Z_y0]
@@ -75,4 +75,4 @@ anim = @animate for frame_number in 1:5:size(positions_x, 1)
 end
 
 # Enregistrement en GIF
-gif(anim, "particles_simulation_with_legend.gif", fps=60)
+gif(anim, "patchs_init.gif", fps=60)
