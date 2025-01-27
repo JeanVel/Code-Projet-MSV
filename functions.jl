@@ -58,7 +58,7 @@ end
 
 function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particules (peu importe le type) autour de du point (x,y) rc
     dens = 0.0
-    for j in 1:length(pos_x)
+    for j in eachindex(pos_x)
         if x != pos_x[j] && y != pos_y[j]
             dx = x - pos_x[j]
             dy = y - pos_y[j]
@@ -208,6 +208,27 @@ function init(NX_0, NY_0, NZ_0, dom)
 end
 
 
+function circular_patch_initialization(nb_plant_particles, nb_ground_water_particles, nb_surface_water_particles,
+    position, radius)
+    random_plants_angle = rand(nb_plant_particles) .* 2 .* pi
+    random_plants_radius = rand(nb_plant_particles) .* radius
+    plants_x0 = position[1] .+ random_plants_radius .^ map(x -> cos(x), random_plants_angle)
+    plants_y0 = position[2] .+ random_plants_radius .^ map(x -> sin(x), random_plants_angle)
+
+    random_gw_angle = rand(nb_ground_water_particles) .* 2 .* pi
+    random_gw_radius = rand(nb_ground_water_particles) .* radius
+    ground_water_x0 = position[1] .+ random_gw_radius .^ map(x -> cos(x), random_gw_angle)
+    ground_water_y0 = position[2] .+ random_gw_radius .^ map(x -> sin(x), random_gw_angle)
+
+    random_sw_angle = rand(nb_surface_water_particles) .* 2 .* pi
+    random_sw_radius = rand(nb_surface_water_particles) .* radius
+    surface_water_x0 = position[1] .+ random_sw_radius .^ map(x -> cos(x), random_sw_angle)
+    surface_water_y0 = position[2] .+ random_sw_radius .^ map(x -> sin(x), random_sw_angle)
+
+    return plants_x0, ground_water_x0, surface_water_x0, plants_y0, ground_water_y0, surface_water_y0
+end
+
+
 function two_circular_patch_initialization(nb_plant_particles, nb_ground_water_particles, nb_surface_water_particles,
     position_1, radius_1, position_2, radius_2)
     
@@ -311,7 +332,7 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps
 
         # Nombre de d'élements de times qui tombent entre t et t+tau :
         n_rain = 0
-        for i in 1:length(times)
+        for i in eachindex(times)
             if times[i] > t && times[i] < t + tau
                 n_rain += 1
             end

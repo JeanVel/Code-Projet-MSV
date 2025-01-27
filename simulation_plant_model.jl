@@ -25,7 +25,8 @@ rc = [0.1, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
 diff = [3,1.,1.2] #paramètres de diffusion pour chaque type de particules
 
 # Initialisation des positions
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
+# X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (0., 0.), 0.5)
 
 X0=[X_x0 ,Y_x0, Z_x0]
 Y0=[X_y0 ,Y_y0, Z_y0]
@@ -74,4 +75,4 @@ anim = @animate for frame_number in 1:5:size(positions_x, 1)
 end
 
 # Enregistrement en GIF
-gif(anim, "particles_simulation_with_legend.gif", fps=600)
+gif(anim, "particles_simulation_with_legend.gif", fps=60)
