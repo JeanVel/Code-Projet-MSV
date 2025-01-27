@@ -212,8 +212,7 @@ function circular_patch_initialization(nb_plant_particles, nb_ground_water_parti
     position, radius)
     random_plants_angle = rand(Uniform(0, 2 * pi), nb_plant_particles)
     random_plants_radius = rand(Uniform(0, radius), nb_plant_particles)
-    # println("cos(theta) = ", map(x -> cos(x), random_plants_angle))
-    # println("r * cos(theta) = ", random_plants_radius .* map(x -> cos(x), random_plants_angle))
+
     plants_x0 = position[1] .+ random_plants_radius .* map(x -> cos(x), random_plants_angle)
     plants_y0 = position[2] .+ random_plants_radius .* map(x -> sin(x), random_plants_angle)
 
@@ -232,21 +231,18 @@ end
 
 
 function two_circular_patch_initialization(nb_plant_particles, nb_gw_particles, nb_sw_particles,
-    position_1, radius_1, position_2, radius_2)
-    plant_group = nb_plant_particles // 2
+    position_1, position_2, radius_1, radius_2)
+    plant_group = nb_plant_particles ÷ 2
     remaining_plants = nb_plant_particles - plant_group
 
-    gw_group = nb_gw_particles // 2
+    gw_group = nb_gw_particles ÷ 2
     remaining_gw = nb_gw_particles - gw_group
 
-    plant_group = nb_plant_particles // 2
-    remaining_plants = nb_plant_particles - plant_group
-
-    sw_group = nb_sw_particles // 2
+    sw_group = nb_sw_particles ÷ 2
     remaining_sw = nb_gw_particles - sw_group
 
     p_x0, gw_x0, sw_x0, p_y0, gw_y0, sw_y0 = circular_patch_initialization(plant_group, gw_group, sw_group, position_1, radius_1)
-    p_x0_2, gw_x0_2, sw_x0_2, p_y0_2, gw_y0_2, sw_y0_2 = circular_patch_initialization(remaining_plant, remaining_gw, remaining_sw, position_2, radius_2)
+    p_x0_2, gw_x0_2, sw_x0_2, p_y0_2, gw_y0_2, sw_y0_2 = circular_patch_initialization(remaining_plants, remaining_gw, remaining_sw, position_2, radius_2)
 
     return vcat(p_x0, p_x0_2), vcat(gw_x0, gw_x0_2), vcat(sw_x0, sw_x0_2), vcat(p_y0, p_y0_2), vcat(gw_y0, gw_y0_2), vcat(sw_y0, sw_y0_2)
 end

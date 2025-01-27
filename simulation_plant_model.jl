@@ -26,7 +26,8 @@ diff = [3,1.,1.2] #paramètres de diffusion pour chaque type de particules
 
 # Initialisation des positions
 # X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), 0.5)
+# X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), 0.5)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = two_circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), (1, 1), 0.5, 0.5)
 
 X0=[X_x0 ,Y_x0, Z_x0]
 Y0=[X_y0 ,Y_y0, Z_y0]
