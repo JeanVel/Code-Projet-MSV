@@ -6,6 +6,10 @@ using Plots
 using Distributions
 using Pkg
 using Random
+using Pkg
+Pkg.add("StatsBase")
+using StatsBase
+
 
 
 
@@ -51,6 +55,30 @@ function simulate_particles(n_particles, T, dt, X0, Y0, chi, L, eps=1e-4)
 end
 
 
+
+function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particules (peu importe le type) autour de du point (x,y) rc
+    dens = 0.0
+    for j in 1:length(pos_x)
+        if x != pos_x[j] && y != pos_y[j]
+            dx = x - pos_x[j]
+            dy = y - pos_y[j]
+            if dx^2 + dy^2 <= rc^2
+                dens += 1
+            end
+        end
+    end
+
+    if length(pos_x) != 0
+        dens /= (length(pos_x))  # Densité
+    else 
+        dens = 0
+    end
+    return dens
+
+end
+
+
+
 function simulate_particles_bd(T, X0, Y0, chi, L, br, dr, C; eps=1e-4, rc=0.1, N_max=2000)
     # Initialisation des positions des particules
     positions_x = [X0]
@@ -66,7 +94,12 @@ function simulate_particles_bd(T, X0, Y0, chi, L, br, dr, C; eps=1e-4, rc=0.1, N
 
         tau = rand(Exponential(1 / ((br + dr * C) * Nt)))
         Z = rand()
+        
+        
         I = rand(1:Nt)  # Tirage d'un indice uniforme entre 1 et Nt
+        
+        
+        
         t += tau  # Mise à jour du temps
 
 
@@ -98,21 +131,15 @@ function simulate_particles_bd(T, X0, Y0, chi, L, br, dr, C; eps=1e-4, rc=0.1, N
         push!(positions_y, new_y)
 
     
-        # Calcul de la densité autour de la particule I dans un rayon rc
-        dens = 0.0
-        for j in 1:length(new_x)
-            if j != I
-                dx = new_x[I] - new_x[j]
-                dy = new_y[I] - new_y[j]
-                if dx^2 + dy^2 <= rc^2
-                    dens += 1
-                end
-            end
-        end
-        dens /= (Nt)  # Densité 
+        #Calcul de la densité autour de chaque particule dans un rayon rc: 
+
+        dens=[density(x,y,positions_x[end], positions_y[end],rc) for (x,y) in zip(positions_x[end],positions_y[end])]
+        
+        # Choix de la particule I selon le vecteur de densité renormalisé : 
+        I = sample(1:Nt, Weights(dens))
 
         a = br / (br + dr * C)
-        b = a + (dr * dens) / (br + dr * C)
+        b = a + (dr * dens[I]) / (br + dr * C)
 
         if b >= 1
             println("Erreur : b > 1, choisissez un meilleur majorant C.")
@@ -164,22 +191,6 @@ function simulate_poisson_process(P::Float64, T::Float64)
 end
 
 
-function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particules (peu importe le type) autour de du point (x,y) rc
-    dens = 0.0
-    for j in 1:length(pos_x)
-        if x != pos_x[j] && y != pos_y[j]
-            dx = x - pos_x[j]
-            dy = y - pos_y[j]
-            if dx^2 + dy^2 <= rc^2
-                dens += 1
-            end
-        end
-    end
-    dens /= (length(pos_x))  # Densité
-    return dens
-
-end
-
 function init(NX_0, NY_0, NZ_0, dom)
     # NX_0 particules X aléatoirement sur [dom , dom]
     X_x0 = rand(NX_0) .* 2*dom .- dom
@@ -210,7 +221,15 @@ function elliptic_patch_initialization(nb_plant_particles, nb_ground_water_parti
 end
 
 
-function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=2000)
+function I(x,a=0.1,b=10.) #fonction d'infiltration 
+    return a + b*x 
+end 
+
+
+
+### Z = eau surface , Y = eau sous sol , X = plante
+
+function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=2000)
     # Initialisation des positions des particules
     
     #particules X :
@@ -245,22 +264,19 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1.,
         NZ_t = length(positions_Zx[end])  # Nombre de particules à l'instant t
 
 
-        tau_x = rand(Exponential(1 / ( C[1] * NX_t)))
-        tau_y = rand(Exponential(1 / ( C[2] * NY_t ) ))
-        tau_z = rand(Exponential(1 / ( C[3] * NZ_t ) ))
+        tau_xb = rand(Exponential(1 / ( C[1] * NX_t)))
+        tau_xd= rand(Exponential(1 / ( C[2] * NX_t)))
+        tau_y = rand(Exponential(1 / ( C[3] * NY_t ) ))
+        tau_z = rand(Exponential(1 / ( C[4] * NZ_t ) ))
         
 
-        tau=min(tau_x,tau_y,tau_z) # pas de temps
-        Zx , Zy, Zz = rand(),rand(),rand()
+        tau=min(tau_xb,tau_xd,tau_y,tau_z) # pas de temps
+        Zxb , Zxd, Zy, Zz = rand(),rand(),rand(), rand()
 
 
-        if NX_t != 0 && NY_t != 0 && NZ_t != 0
-            I_x ,I_y, I_z = rand(1:NX_t),rand(1:NY_t) , rand(1:NZ_t) 
-        else 
-            println("Erreur : pas de particules")
+        if NX_t == 0 
+            println("Plus de plantes")
             println("NX_t :",NX_t)
-            println("NY_t :",NY_t)
-            println("NZ_t :",NZ_t)
             println("niter :",niter)
             break
         end
@@ -291,7 +307,7 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1.,
         push!(positions_Zx, new_Zx)
         push!(positions_Zy, new_Zy)
 
-        ### mort et naissance de particule Z : 
+        ### mort et naissance des particules Z : 
 
         # Nombre de d'élements de times qui tombent entre t et t+tau :
         n_rain = 0
@@ -302,83 +318,115 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,alpha, C,rG,rc,diff; dom= 1.,
         end
 
         #on ajoute n_rain particules de pluie à la liste des particules Z aléatoirement sur le [dom, dom]
-        for i in 1:n_rain
+        for _ in 1:n_rain
             push!(positions_Zx[end], rand() .* 2*dom .- dom)
             push!(positions_Zy[end], rand() .* 2*dom .- dom)
         end
+        NZ_t=length(positions_Zx[end])
 
-        #densité de plantes autour de particule I_z dans un rayon rc[3]
-        dens_xz = density(positions_Zx[end][I_z],positions_Zx[end][I_z],positions_Xx[end],positions_Xy[end],rc[3])
-        b_z=dens_xz/C[3]
+        #densité de plantes autour des particule eau de surface Z  dans un rayon rc[3]
+        #Choix de la particule Z : 
+        if NZ_t !=0 #si il reste de l'eau de surface
+            rate_vect_zd=[I(density(x,y,positions_Xx[end], positions_Xy[end],rc[3])) for (x,y) in zip(positions_Zx[end],positions_Zy[end])]
+            I_z = sample(1:NZ_t, Weights(rate_vect_zd))
+
+            rate_I_zd = rate_vect_zd[I_z]
+            b_z=rate_I_zd/C[4]
         
-        if b_z >= 1
-            println("Erreur : b > 1, choisissez un meilleur majorant C.")
-            break
-        end
+            if b_z >= 1
+                println("Erreur : b > 1, choisissez un meilleur majorant C4.")
+                break
+            end
 
-        if Zz <= b_z  # Mort
+            if Zz <= b_z  # Mort
             
-            #ajouter une particule de type Y à la place de la particule Z
-            push!(positions_Yx[end], positions_Zx[end][I_z])
-            push!(positions_Yy[end], positions_Zy[end][I_z])
-            naissances_Y += 1
+                #ajouter une particule de type Y à la place de la particule Z
+                push!(positions_Yx[end], positions_Zx[end][I_z])
+                push!(positions_Yy[end], positions_Zy[end][I_z])
+                naissances_Y += 1
 
-            # Supprimer la particule I_z
-            deleteat!(positions_Zx[end], I_z)
-            deleteat!(positions_Zy[end], I_z)
-            morts_Z += 1
+                # Supprimer la particule I_z
+                deleteat!(positions_Zx[end], I_z)
+                deleteat!(positions_Zy[end], I_z)
+                morts_Z += 1
 
-        end
+            end
+        end 
+
+
         ### mort et naissance de particule Y :
         
-        #densite de plantes autour de particule I_y dans un rayon rG
-        dens_xy = density(positions_Yx[end][I_y],positions_Yx[end][I_y],positions_Xx[end],positions_Xy[end],rG)
-        b_y= (L+dens_xy)/C[2]
-        if b_y >= 1
-            println("Erreur : b > 1, choisissez un meilleur majorant C.")
-            break
-        end
-        if Zy <= b_y  # Mort
-            # Supprimer la particule I_y
+        #densite de plantes autour des particule Y (eau surface) dans un rayon rG
+        rate_vect_yd=[L+density(x,y,positions_Xx[end], positions_Xy[end],rG) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
+        NY_t=length(positions_Yx[end])
 
-            deleteat!(positions_Yx[end], I_y)
-            deleteat!(positions_Yy[end], I_y)
-            morts_Y += 1
-        end
+        if NY_t!=0 #si il y a de l'eau en surface
+            I_y = sample(1:NY_t, Weights(rate_vect_yd))
+            rate_I_yd = rate_vect_yd[I_y]
+            b_y= rate_I_yd/C[3]
+            if b_y >= 1
+                println("Erreur : b > 1, choisissez un meilleur majorant C3.")
+                break
+            end
+            if Zy <= b_y  # Mort
+                # Supprimer la particule I_y
+                deleteat!(positions_Yx[end], I_y)
+                deleteat!(positions_Yy[end], I_y)
+                morts_Y += 1
+            end
+        end 
 
+        
         ### mort et naissance de particule X :
 
-        #densite d'eau de sous sol (Y) autour de particule I_x dans un rayon rc[1]
-        dens_yx = density(positions_Xx[end][I_x],positions_Xx[end][I_x],positions_Yx[end],positions_Yy[end],rG)
-        #densite de plantes autour de particule I_x dans un rayon rc[1]
-        dens_xx = density(positions_Xx[end][I_x],positions_Xx[end][I_x],positions_Xx[end],positions_Xy[end],rc[1])
-        
-        a_x=dens_yx/C[1]
-        b_x=a_x+(lamb+(dens_yx*(dens_xx/K)))/C[1]
-        if b_x >= 1
-            println("Erreur : b > 1, choisissez un meilleur majorant C.")
-            break
-        end
+        #choix de celle qui va naitre : 
 
-        if Zx <= a_x  # Naissance
-            # naissance d'une particule à coté de la particule I_x
-            r = rc[1] * sqrt(rand())
-            theta = 2 * π * rand()
-            x_new = positions_Xx[end][I_x] + r * cos(theta)
-            y_new = positions_Xy[end][I_x] + r * sin(theta)
-            push!(positions_Xx[end], x_new)
-            push!(positions_Xy[end], y_new)
-            naissances_X += 1
+        #densite de Y (eau sous sol) autour des X (plantes) dans un rayon rG
+        if NX_t != 0 
+            dens_vect_yx=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            if sum(dens_vect_yx) !=0 
+                I_xb=sample(1:NX_t, Weights(dens_vect_yx))
+                b_xb=dens_vect_yx[I_xb]/C[1]
+                if b_xb >= 1
+                    println("Erreur : b > 1, choisissez un meilleur majorant C1.")
+                    break
+                end
+                if Zxb <= b_xb  # Naissance
+                    # naissance d'une particule à coté de la particule I_xb
+                    r = rc[1] * sqrt(rand())
+                    theta = 2 * π * rand()
+                    x_new = positions_Xx[end][I_xb] + r * cos(theta)
+                    y_new = positions_Xy[end][I_xb] + r * sin(theta)
+                    push!(positions_Xx[end], x_new)
+                    push!(positions_Xy[end], y_new)
+                    naissances_X += 1
+                end
+            end 
 
+            NX_t=length(positions_Xx[end])
+            #choix de celle qui va mourir : 
 
-        elseif Zx > a_x && Zx <= b_x  # Mort
-            # Supprimer la particule I_x
-            deleteat!(positions_Xx[end], I_x)
-            deleteat!(positions_Xy[end], I_x)
-            morts_X += 1
-        end
+            #densité de X (plantes) autour de chaque particule X : 
+            dens_vect_yx=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            dens_vect_xx=[density(x,y,positions_Xx[end], positions_Xy[end],rc[1]) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            
+            rate_vect_xd=lamb .+ dens_vect_yx.*(dens_vect_xx./K)
+            if sum(rate_vect_xd) !=0 
+                I_xd=sample(1:NX_t, Weights(rate_vect_xd))
+                b_xd=  rate_vect_xd[I_xd]/C[2]
+                if b_xd >= 1
+                    println("Erreur : b > 1, choisissez un meilleur majorant C2.")
+                    break
+                end 
+                if Zxd <= b_xd  # Mort
+                    # Supprimer la particule I_xd
+                    deleteat!(positions_Xx[end], I_xd)
+                    deleteat!(positions_Xy[end], I_xd)
+                    morts_X += 1
+                end
 
-
+            end
+        end 
         t += tau  # Mise à jour du temps
 
     end
