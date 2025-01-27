@@ -10,27 +10,27 @@ using Distributions
 
 # Paramètres de simulation : 
 T = 10.0
-NX_0 = 100  # Nombre initial de particules X
-NY_0 = 30  # Nombre initial de particules Y
-NZ_0 = 40  # Nombre initial de particules Z
-dom = 1.0  # Domaine de simulation
-lamb = 0.1  # Paramètre de mort de la particule X
+NX_0 = 10  # Nombre initial de particules X
+NY_0 = 0  # Nombre initial de particules Y
+NZ_0 = 0  # Nombre initial de particules Z
+dom = 2.0  # Domaine de simulation
+lamb = 10  # Paramètre de mort de la particule X
 P = 1000.  # Paramètre de précipitation
 K = 0.001  # Paramètre de saturation
 L = 0.01  # Paramètre d'évaporation
 alpha = 100.  # Paramètre d'infiltration dans le sous sol
-C = [lamb+10., 10/K , L+10, alpha*10]  # Majorants de l'intensité du processus de poisson
+C = [lamb + 10., 10 / K , L + 10, alpha * 10]  # Majorants de l'intensité du processus de poisson
 rG = 1.  # Rayon de voisinage pour la densité de particules Y
-rc = [0.1, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
-diff = [3,1.,1.2] #paramètres de diffusion pour chaque type de particules
+rc = [0.5, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
+diff = [0.001, 1, 5] #paramètres de diffusion pour chaque type de particules
 
 # Initialisation des positions
 # X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, L)
 # X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), 0.5)
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = two_circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), (1, 1), 0.5, 0.5)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = two_circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, 1), (1, -1), 0.5, 0.5)
 
-X0=[X_x0 ,Y_x0, Z_x0]
-Y0=[X_y0 ,Y_y0, Z_y0]
+X0 = [X_x0 ,Y_x0, Z_x0]
+Y0 = [X_y0 ,Y_y0, Z_y0]
 
 sim_plant=simulate_plant(T, X0, Y0, lamb, P, K, L,I, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=1000)
 
@@ -76,4 +76,4 @@ anim = @animate for frame_number in 1:5:size(positions_x, 1)
 end
 
 # Enregistrement en GIF
-gif(anim, "patchs_init.gif", fps=60)
+gif(anim, "diffusion_differentes.gif", fps=60)

@@ -261,7 +261,6 @@ end
 
 
 ### Z = eau surface , Y = eau sous sol , X = plante
-
 function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=2000)
     # Initialisation des positions des particules
     
@@ -440,10 +439,10 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps
             #choix de celle qui va mourir : 
 
             #densité de X (plantes) autour de chaque particule X : 
-            dens_vect_yx=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
-            dens_vect_xx=[density(x,y,positions_Xx[end], positions_Xy[end],rc[1]) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            dens_vect_yx = [density(x,y,positions_Yx[end], positions_Yy[end], rG) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
+            dens_vect_xx = [density(x,y,positions_Xx[end], positions_Xy[end], rc[1]) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
             
-            rate_vect_xd=lamb .+ dens_vect_yx.*(dens_vect_xx./K)
+            rate_vect_xd = lamb .+ dens_vect_yx .* (dens_vect_xx ./ K)
             if sum(rate_vect_xd) !=0 
                 I_xd=sample(1:NX_t, Weights(rate_vect_xd))
                 b_xd=  rate_vect_xd[I_xd]/C[2]
