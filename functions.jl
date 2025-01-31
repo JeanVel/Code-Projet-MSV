@@ -173,8 +173,6 @@ function simulate_particles_bd(T, X0, Y0, chi, L, br, dr, C; eps=1e-4, rc=0.1, N
 end
 
 
-
-
 function simulate_poisson_process(P::Float64, T::Float64)
     times = Float64[]  # Liste pour stocker les instants
     t = 0.0  # Temps initial
@@ -248,20 +246,14 @@ function two_circular_patch_initialization(nb_plant_particles, nb_gw_particles, 
 end
 
 
-function elliptic_patch_initialization(nb_plant_particles, nb_ground_water_particles, nb_surface_water_particles,
-    position, a, b)
-
+function infiltration(plant_density, slope, intercept)
+    return slope * plant_density + intercept 
 end
-
-
-function I(x,a=0.1,b=10.) #fonction d'infiltration 
-    return a + b*x 
-end 
 
 
 
 ### Z = eau surface , Y = eau sous sol , X = plante
-function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps=1e-4, N_max=2000)
+function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG, rc, diff, dom, N_max)
     # Initialisation des positions des particules
     
     #particules X :
@@ -287,9 +279,9 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps
     morts_Z = 0
 
     #simule un processus de poisson d'intensité P entre 0 et T, on stocke les instants dans une liste : 
-    times = simulate_poisson_process(P, T) #Particules de pluie qui tombent 
+    raining_times = simulate_poisson_process(P, T) #Particules de pluie qui tombent 
     
-    while t < T && niter < N_max
+    while niter < N_max
         niter += 1
         NX_t = length(positions_Xx[end])  # Nombre de particules à l'instant t
         NY_t = length(positions_Yx[end])  # Nombre de particules à l'instant t
@@ -341,25 +333,18 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps
 
         ### mort et naissance des particules Z : 
 
-        # Nombre de d'élements de times qui tombent entre t et t+tau :
-        n_rain = 0
-        for i in eachindex(times)
-            if times[i] > t && times[i] < t + tau
-                n_rain += 1
+        is_raining = any(r_t -> t < r_t < t + tau, raining_times)
+        if is_raining
+            for _ in 1:raining_intensity
+                push!(positions_Zx[end], rand() .* 2*dom .- dom)
+                push!(positions_Zy[end], rand() .* 2*dom .- dom)
             end
         end
-
-        #on ajoute n_rain particules de pluie à la liste des particules Z aléatoirement sur le [dom, dom]
-        for _ in 1:n_rain
-            push!(positions_Zx[end], rand() .* 2*dom .- dom)
-            push!(positions_Zy[end], rand() .* 2*dom .- dom)
-        end
-        NZ_t=length(positions_Zx[end])
 
         #densité de plantes autour des particule eau de surface Z  dans un rayon rc[3]
         #Choix de la particule Z : 
         if NZ_t !=0 #si il reste de l'eau de surface
-            rate_vect_zd=[I(density(x,y,positions_Xx[end], positions_Xy[end],rc[3])) for (x,y) in zip(positions_Zx[end],positions_Zy[end])]
+            rate_vect_zd=[infiltration(density(x, y, positions_Xx[end], positions_Xy[end], rc[3]), I_param[1], I_param[2]) for (x,y) in zip(positions_Zx[end],positions_Zy[end])]
             I_z = sample(1:NZ_t, Weights(rate_vect_zd))
 
             rate_I_zd = rate_vect_zd[I_z]
@@ -464,5 +449,6 @@ function simulate_plant(T, X0, Y0, lamb, P, K,  L ,I, C,rG,rc,diff; dom= 1., eps
     end
 
     # Retour des résultats
-    return positions_Xx, positions_Xy, positions_Yx, positions_Yy, positions_Zx, positions_Zy, niter, naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z   
+    return (positions_Xx, positions_Xy, positions_Yx, positions_Yy, positions_Zx, positions_Zy, niter, t,
+            naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z)   
 end
