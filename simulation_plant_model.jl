@@ -7,6 +7,7 @@ using Plots
 using Distributions
 using FFTW
 using Images
+using NPZ
 
 
 # Paramètres de simulation :
@@ -93,10 +94,17 @@ end
 # Enregistrement en GIF
 gif(anim, "figures/animations/tests.gif", fps=60)
 
+
+# Save positions_Xx and positions_Xy to NPZ files
+npzwrite("generated/plants_last_x_positions.npz", positions_Xx[end])
+npzwrite("generated/plants_last_y_positions.npz", positions_Xy[end])
+
+
 # Enregistrement de la dernière frame avec juste les plantes en noir
 plant_last_pos = get_image_from_positions(dom, positions_Xx, positions_Xy)
 display(plant_last_pos)
 savefig(plant_last_pos, "figures/images/plants.png")
+
 
 plants_gray_img = Gray.(load("figures/images/plants.png"))  # transforme l'image en niveau de gris
 plants_matrix = channelview(plants_gray_img)  # transforme l'image en matrice
