@@ -13,14 +13,7 @@ plot_radial_spectrum <- function(img_matrix){
 }
 
 # Load image
-image_path <- "plants.png"
+image_path <- "/figures/images/plants.png"
 image <- readPNG(image_path)
-turing_path <- "test_turing_pattern.png"
-turing <- readPNG(turing_path)
-
-# Convert image into gray scale if needed
-# turing_gray <- convert_rgb_into_gray_scale(turing)
 
 plot_radial_spectrum(image)
-
-plot_radial_spectrum(turing)
