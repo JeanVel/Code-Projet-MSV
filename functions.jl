@@ -1,16 +1,11 @@
-
 import Pkg
 using Random
 using LinearAlgebra
 using Plots
 using Distributions
-using Pkg
 using Random
 using Pkg
-Pkg.add("StatsBase")
 using StatsBase
-
-
 
 
 function simulate_particles(n_particles, T, dt, X0, Y0, chi, L, eps=1e-4)
@@ -247,13 +242,17 @@ end
 
 
 function infiltration(plant_density, slope, intercept)
-    return slope * plant_density + intercept 
+    return slope .* plant_density .+ intercept
 end
 
 
+function competition(plant_density, ground_water_density, K)
+    return plant_density ./ K
+end
+
 
 ### Z = eau surface , Y = eau sous sol , X = plante
-function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG, rc, diff, dom, N_max)
+function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG, rc, diff, dom, N_max, T)
     # Initialisation des positions des particules
     
     #particules X :
@@ -281,7 +280,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
     #simule un processus de poisson d'intensité P entre 0 et T, on stocke les instants dans une liste : 
     raining_times = simulate_poisson_process(P, T) #Particules de pluie qui tombent 
     
-    while niter < N_max
+    while niter < N_max && t < T
         niter += 1
         NX_t = length(positions_Xx[end])  # Nombre de particules à l'instant t
         NY_t = length(positions_Yx[end])  # Nombre de particules à l'instant t
@@ -341,10 +340,15 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             end
         end
 
-        #densité de plantes autour des particule eau de surface Z  dans un rayon rc[3]
-        #Choix de la particule Z : 
-        if NZ_t !=0 #si il reste de l'eau de surface
-            rate_vect_zd=[infiltration(density(x, y, positions_Xx[end], positions_Xy[end], rc[3]), I_param[1], I_param[2]) for (x,y) in zip(positions_Zx[end],positions_Zy[end])]
+        NZ_t = length(positions_Zx[end])  # mise à jour du nombre de particules d'eau de surface (Z)
+
+
+        # densité de plantes autour des particule eau de surface Z  dans un rayon rc[3]
+        density_plants_around_sw = [density(x, y, positions_Xx[end], positions_Xy[end], rc[3]) for (x,y) in zip(positions_Zx[end], positions_Zy[end])]
+        
+        # Choix de la particule Z : 
+        if NZ_t != 0  # s'il reste de l'eau de surface
+            rate_vect_zd = infiltration(density_plants_around_sw, I_param[1], I_param[2])
             I_z = sample(1:NZ_t, Weights(rate_vect_zd))
 
             rate_I_zd = rate_vect_zd[I_z]
@@ -400,10 +404,10 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 
         #densite de Y (eau sous sol) autour des X (plantes) dans un rayon rG
         if NX_t != 0 
-            dens_vect_yx=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
-            if sum(dens_vect_yx) !=0 
-                I_xb=sample(1:NX_t, Weights(dens_vect_yx))
-                b_xb=dens_vect_yx[I_xb]/C[1]
+            gw_density_around_plants=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            if sum(gw_density_around_plants) != 0 
+                I_xb = sample(1:NX_t, Weights(gw_density_around_plants))
+                b_xb = gw_density_around_plants[I_xb] / C[1]
                 if b_xb >= 1
                     println("Erreur : b > 1, choisissez un meilleur majorant C1.")
                     break
@@ -423,11 +427,11 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             NX_t=length(positions_Xx[end])
             #choix de celle qui va mourir : 
 
-            #densité de X (plantes) autour de chaque particule X : 
-            dens_vect_yx = [density(x,y,positions_Yx[end], positions_Yy[end], rG) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
-            dens_vect_xx = [density(x,y,positions_Xx[end], positions_Xy[end], rc[1]) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
+             
+            gw_density_around_plants = [density(x,y,positions_Yx[end], positions_Yy[end], rG) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
+            plant_density_around_plants = [density(x,y,positions_Xx[end], positions_Xy[end], rc[1]) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
             
-            rate_vect_xd = lamb .+ dens_vect_yx .* (dens_vect_xx ./ K)
+            rate_vect_xd = lamb .+ competition(plant_density_around_plants, gw_density_around_plants, K)
             if sum(rate_vect_xd) !=0 
                 I_xd=sample(1:NX_t, Weights(rate_vect_xd))
                 b_xd=  rate_vect_xd[I_xd]/C[2]
@@ -451,4 +455,22 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
     # Retour des résultats
     return (positions_Xx, positions_Xy, positions_Yx, positions_Yy, positions_Zx, positions_Zy, niter, t,
             naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z)   
+end
+
+
+function get_image_from_positions(domain, positions_x, positions_y)
+    min_x = minimum(positions_x[end])
+    max_x = maximum(positions_x[end])
+    min_y = minimum(positions_y[end])
+    max_y = maximum(positions_y[end])
+    p = plot(xlim=(min_x, max_x), ylim=(min_y, max_y), framestyle=:none, grid=false, lenged=false, axis=false)
+    scatter!(
+    positions_x[end], 
+    positions_y[end],
+    color=:black,
+    legend=false,
+    ms=4,
+    )
+
+    return p
 end
