@@ -1,3 +1,6 @@
 *.png
 *.gif
 potential_changes.jl
+figures
+.venv
+.Rhistory
