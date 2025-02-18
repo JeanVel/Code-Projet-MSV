@@ -11,8 +11,8 @@ using NPZ
 
 
 # Paramètres de simulation :
-N_max = 40  # nombre d'itérations de la simulation
-T = 10.0  # Temps de simulation
+N_max = 1000  # nombre d'itérations de la simulation
+T = 100.0  # Temps de simulation
 dom = 2.0  # Domaine de simulation
 
 NX_0 = 100  # Nombre initial de particules X
@@ -22,14 +22,14 @@ NZ_0 = 0  # Nombre initial de particules Z
 diff = [0.001, 1, 5] # Coefficients diffusion pour chaque type de particules
 
 lamb = 10  # Paramètre de mort naturelle des plantes (particules X)
-K = 0.001  # Paramètre de saturation
+K = 0.5  # Paramètre de saturation
 
 P = 1000.  # Intensité du processus de Poisson simulant la pluie sur l'environnement
 raining_intensity = 40  # Nombre de particules ajoutées par un événement de pluie
 
-L = 0.01  # Paramètre d'évaporation
+L = 0.1  # Paramètre d'évaporation
 alpha = 100.  # Paramètre d'infiltration dans le sous sol
-C = [lamb + 10., 10 / K , L + 10, alpha * 10]  # Majorants de l'intensité du processus de poisson
+C = [lamb + 10., 15 , L + 10, alpha * 10]  # Majorants de l'intensité du processus de poisson
 rG = 1.  # Rayon de voisinage pour la densité de particules Y
 rc = [0.5, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
 I_parameters = [15, 25]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
@@ -62,11 +62,13 @@ nb_ground_water = [length(ground_water_x_pos) for ground_water_x_pos in position
 nb_surface_water = [length(surface_water_x_pos) for surface_water_x_pos in positions_Zx]
 nb_particles = [nb_plants, nb_ground_water, nb_surface_water]
 
+println("Nombre de points temporels : ", length(times))
+
 particles_over_time = plot(xlabel="temps", ylabel="nombre de particules", legend=:topright)
 for (N, l, c) in zip(nb_particles, labels, base_colors)
     plot!(particles_over_time, times, N, label=l, color=c, lw=2)
+    println("Nb particules ", length(N))
 end
-particles_over_time
 display(particles_over_time)
 savefig(particles_over_time, "figures/graphiques/particles_over_time.png")
 
@@ -92,21 +94,25 @@ end
 
 
 # Enregistrement en GIF
-gif(anim, "figures/animations/tests.gif", fps=60)
+gif(anim, "figures/animations/tests.gif", fps=35)
+
+# Ne pas sauvegarder si jamais la simulation se termine par la mort de toutes les plantes
+if length(positions_Xx[end]) > 0
+    # Sauvegarde des dernières positions de l'eau de surface au format .npz
+    npzwrite("generated/surface_water_last_x_positions.npz", positions_Zx[end])
+    npzwrite("generated/surface_water_last_y_positions.npz", positions_Zy[end])
+
+    # Enregistrement de la dernière frame avec juste les plantes en noir
+    plant_last_pos = get_image_from_positions(positions_Xx, positions_Xy)
+    # display(plant_last_pos)
+    savefig(plant_last_pos, "figures/images/plants.png")
+
+    plants_gray_img = Gray.(load("figures/images/plants.png"))  # transforme l'image en niveau de gris
+    plants_matrix = channelview(plants_gray_img)  # transforme l'image en matrice
+
+    save("figures/images/plants.png", plants_matrix)  # sauvegarde la matrice en image
+end
 
 
-# Save positions_Xx and positions_Xy to NPZ files
-npzwrite("generated/plants_last_x_positions.npz", positions_Xx[end])
-npzwrite("generated/plants_last_y_positions.npz", positions_Xy[end])
 
 
-# Enregistrement de la dernière frame avec juste les plantes en noir
-plant_last_pos = get_image_from_positions(dom, positions_Xx, positions_Xy)
-display(plant_last_pos)
-savefig(plant_last_pos, "figures/images/plants.png")
-
-
-plants_gray_img = Gray.(load("figures/images/plants.png"))  # transforme l'image en niveau de gris
-plants_matrix = channelview(plants_gray_img)  # transforme l'image en matrice
-
-save("figures/images/plants.png", plants_matrix)  # sauvegarde la matrice en image

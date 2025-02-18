@@ -246,10 +246,9 @@ function infiltration(plant_density, slope, intercept)
 end
 
 
-function competition(plant_density, ground_water_density, K)
+function competition(plant_density, K)
     return plant_density ./ K
 end
-
 
 ### Z = eau surface , Y = eau sous sol , X = plante
 function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG, rc, diff, dom, N_max, T)
@@ -281,7 +280,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
     raining_times = simulate_poisson_process(P, T) #Particules de pluie qui tombent 
     
     while niter < N_max && t < T
-        niter += 1
+        
         NX_t = length(positions_Xx[end])  # Nombre de particules à l'instant t
         NY_t = length(positions_Yx[end])  # Nombre de particules à l'instant t
         NZ_t = length(positions_Zx[end])  # Nombre de particules à l'instant t
@@ -289,8 +288,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 
         tau_xb = rand(Exponential(1 / ( C[1] * NX_t)))
         tau_xd= rand(Exponential(1 / ( C[2] * NX_t)))
-        tau_y = rand(Exponential(1 / ( C[3] * NY_t ) ))
-        tau_z = rand(Exponential(1 / ( C[4] * NZ_t ) ))
+        tau_y = rand(Exponential(1 / ( C[3] * NY_t )))
+        tau_z = rand(Exponential(1 / ( C[4] * NZ_t )))
         
 
         tau=min(tau_xb,tau_xd,tau_y,tau_z) # pas de temps
@@ -300,7 +299,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
         if NX_t == 0 
             println("Plus de plantes")
             println("NX_t :",NX_t)
-            println("niter :",niter)
+            println("niter :",niter)            
             break
         end
 
@@ -431,7 +430,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             gw_density_around_plants = [density(x,y,positions_Yx[end], positions_Yy[end], rG) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
             plant_density_around_plants = [density(x,y,positions_Xx[end], positions_Xy[end], rc[1]) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
             
-            rate_vect_xd = lamb .+ competition(plant_density_around_plants, gw_density_around_plants, K)
+            rate_vect_xd = lamb .+ competition(plant_density_around_plants, K)
             if sum(rate_vect_xd) !=0 
                 I_xd=sample(1:NX_t, Weights(rate_vect_xd))
                 b_xd=  rate_vect_xd[I_xd]/C[2]
@@ -449,7 +448,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             end
         end 
         t += tau  # Mise à jour du temps
-
+        niter += 1
+        
     end
 
     # Retour des résultats
@@ -458,7 +458,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 end
 
 
-function get_image_from_positions(domain, positions_x, positions_y)
+function get_image_from_positions(positions_x, positions_y)
     min_x = minimum(positions_x[end])
     max_x = maximum(positions_x[end])
     min_y = minimum(positions_y[end])
