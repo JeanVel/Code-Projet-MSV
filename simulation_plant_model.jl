@@ -11,7 +11,7 @@ using NPZ
 
 
 # Paramètres de simulation :
-N_max = 1000  # nombre d'itérations de la simulation
+N_max = 6000  # nombre d'itérations de la simulation
 T = 100.0  # Temps de simulation
 dom = 2.0  # Domaine de simulation
 
@@ -21,18 +21,17 @@ NZ_0 = 0  # Nombre initial de particules Z
 
 diff = [0.001, 1, 5] # Coefficients diffusion pour chaque type de particules
 
-lamb = 10  # Paramètre de mort naturelle des plantes (particules X)
+lamb = 0.7  # Paramètre de mort naturelle des plantes (particules X)
 K = 0.5  # Paramètre de saturation
 
-P = 1000.  # Intensité du processus de Poisson simulant la pluie sur l'environnement
-raining_intensity = 40  # Nombre de particules ajoutées par un événement de pluie
+P = 7.  # Intensité du processus de Poisson simulant la pluie sur l'environnement
+raining_intensity = 60  # Nombre de particules ajoutées par un événement de pluie
 
-L = 0.1  # Paramètre d'évaporation
-alpha = 100.  # Paramètre d'infiltration dans le sous sol
+L = 1  # Paramètre d'évaporation
 C = [lamb + 10., 15 , L + 10, alpha * 10]  # Majorants de l'intensité du processus de poisson
-rG = 1.  # Rayon de voisinage pour la densité de particules Y
+rG = 2.  # Rayon de voisinage pour la densité de particules Y
 rc = [0.5, 0.1, 10]  # Rayon de voisinage pour la densité de particules X Y Z
-I_parameters = [15, 25]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
+I_parameters = [150, 5]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
 
 # Initialisation des positions
 X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
@@ -69,7 +68,7 @@ for (N, l, c) in zip(nb_particles, labels, base_colors)
     plot!(particles_over_time, times, N, label=l, color=c, lw=2)
     println("Nb particules ", length(N))
 end
-display(particles_over_time)
+# display(particles_over_time)
 savefig(particles_over_time, "figures/graphiques/particles_over_time.png")
 
 # Définition des positions et des légendes
@@ -77,21 +76,7 @@ positions_x = [positions_Xx positions_Yx positions_Zx]  # Concaténation des coo
 positions_y = [positions_Xy positions_Yy positions_Zy]  # Concaténation des coordonnées Y
 
 # Création de l'animation
-anim = @animate for frame_number in 1:5:size(positions_x, 1)
-    p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Simulation de particules")
-    for i in 1:3  # Boucle sur les trois types de particules
-        scatter!(
-            positions_x[frame_number, i], 
-            positions_y[frame_number, i],
-            label=labels[i], 
-            color=base_colors[i], 
-            ms=4,  # Taille des marqueurs
-            legend=:topright
-        )
-    end
-    p
-end
-
+anim = create_animation(positions_x, positions_y, dom, labels, base_colors)
 
 # Enregistrement en GIF
 gif(anim, "figures/animations/tests.gif", fps=35)

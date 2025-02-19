@@ -458,6 +458,27 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 end
 
 
+using Plots
+
+function create_animation(positions_x, positions_y, dom, labels, base_colors, output_path="figures/animations/tests.gif", fps=35)
+    anim = @animate for frame_number in 1:5:size(positions_x, 1)
+        p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Simulation de particules")
+        for i in 1:3  # Boucle sur les trois types de particules
+            scatter!(
+                positions_x[frame_number, i], 
+                positions_y[frame_number, i],
+                label=labels[i], 
+                color=base_colors[i], 
+                ms=4,  # Taille des marqueurs
+                legend=:topright
+            )
+        end
+        p
+    end
+    return anim
+end
+
+
 function get_image_from_positions(positions_x, positions_y)
     min_x = minimum(positions_x[end])
     max_x = maximum(positions_x[end])
