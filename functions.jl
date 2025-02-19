@@ -460,8 +460,8 @@ end
 
 using Plots
 
-function create_animation(positions_x, positions_y, dom, labels, base_colors, output_path="figures/animations/tests.gif", fps=35)
-    anim = @animate for frame_number in 1:5:size(positions_x, 1)
+function create_animation(positions_x, positions_y, dom, labels, base_colors, frame_step=5)
+    anim = @animate for frame_number in 1:frame_step:size(positions_x, 1)
         p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Simulation de particules")
         for i in 1:3  # Boucle sur les trois types de particules
             scatter!(
@@ -476,6 +476,25 @@ function create_animation(positions_x, positions_y, dom, labels, base_colors, ou
         p
     end
     return anim
+end
+
+
+function plot_particles_over_time(nb_particles, times, labels, base_colors)
+    particles_over_time = plot(xlabel="Temps", ylabel="Nombre de particules", legend=:topright)
+
+    for (N, l, c) in zip(nb_particles, labels, base_colors)
+        plot!(particles_over_time, times, N, label=l, color=c, lw=2)
+    end
+
+    return particles_over_time
+end
+
+
+function plot_plants_over_time(nb_plants, times, color=:green)
+    plant_over_time = plot(xlabel="temps", ylabel="Nombre de particules de plantes",legend=:none)
+    plot!(plant_over_time, times, nb_plants, color=color, lw=2)
+
+    return plant_over_time
 end
 
 
