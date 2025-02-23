@@ -38,3 +38,9 @@ plt.savefig("figures/graphiques/patchs_clustering.png")
 plt.hist(counts, edgecolor='k')
 plt.xlabel("Taille des patchs", size=14)
 plt.ylabel("Nombre de patchs", size=14)
+
+# Tracer la figure du nombre de cluster en fonction de leur taille
+plt.loglog(counts, unique_labels, 'o')
+plt.xlabel("Taille des patchs", size=14)
+plt.ylabel("Nombre de patchs", size=14)
+plt.savefig("figures/graphiques/power_law.png")
