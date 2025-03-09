@@ -3,9 +3,24 @@ include("functions.jl")
 using Pkg
 using JLD2
 using KernelDensity
+using Plots
 
 
-function create_animation(positions_x, positions_y, dom, labels, base_colors, frame_step=5)
+function animates_plants(plants_positions, dom, frame_step)
+    plants_x, plants_y = plants_positions
+
+    p = plot(legend=:topright, xlim=(-2 * dom, 2 * dom), ylim=(-2 * dom, 2 * dom), xlabel="x", ylabel="y", title="Simulation de plantes")
+    frame_number = length(plants_x)
+
+    anim = @animate for frame_number in 1:frame_step:frame_number
+        scatter(p, plants_x[frame_number], plants_y[frame_number], color=:green, label="Plantes", ms=4)
+    end
+
+    return anim
+end
+
+
+function create_animation(positions_x, positions_y, dom, frame_step=5)
     plants_x = positions_x[1]
     plants_y = positions_y[1]
 
@@ -15,46 +30,58 @@ function create_animation(positions_x, positions_y, dom, labels, base_colors, fr
     s_water_x = positions_x[3]
     s_water_y = positions_y[3]
 
-    plant_label, g_water_label, s_water_label = labels
-    plant_color, g_water_color, s_water_color = base_colors
+    p1 = plot(legend=:topright, xlim=(-2 * dom, 2 * dom), ylim=(-2 * dom, 2 * dom), xlabel="x", ylabel="y", title="Simulation de plantes et de l'eau de sous-sol")
+    p2 = plot(legend=:topright, xlim=(-2 * dom, 2 * dom), ylim=(-2 * dom, 2 * dom), xlabel="x", ylabel="y", title="Simulation de l'eau de surface")
 
-    anim = @animate for frame_number in 1:frame_step:axes(positions_x, 1)
-        p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Simulation de particules")
-        scatter!(p, plants_x[frame_number], plants_y[frame_number], label=plant_label, color=plant_color, ms=4)
-
-        
-
-        for i in 1:3  # Boucle sur les trois types de particules
-            scatter!(
-                positions_x[frame_number, i], 
-                positions_y[frame_number, i],
-                label=labels[i], 
-                color=base_colors[i], 
-                ms=4,  # Taille des marqueurs
-                legend=:topright
+    frame_number = size(plants_x, 1)
+    print("FRAME NUMBER: ", frame_number)
+    anim = @animate for frame_number in 1:frame_step:frame_number
+        if length(g_water_x[frame_number]) > 0
+            g_water_density_estimation = kde((g_water_x[frame_number], g_water_y[frame_number]))
+            heatmap(
+                p1, g_water_density_estimation.x, g_water_density_estimation.y, g_water_density_estimation.density',
+                color=:plasma, xlabel="X", ylabel="Y", label="Densité d'eau dans le sol",
+                xlims=(-2 * dom, 2 * dom), ylims=(-2 * dom, 2 * dom)
+            )
+        else
+            heatmap(
+            p1, [-2 * dom, 2 * dom], [-2 * dom, 2 * dom], fill(0.0, 2, 2)',
+            color=:plasma, xlabel="X", ylabel="Y", label="Densité d'eau dans le sol",
+            xlims=(-2 * dom, 2 * dom), ylims=(-2 * dom, 2 * dom)
             )
         end
-        p
+
+        scatter!(p1, plants_x[frame_number], plants_y[frame_number], label="Plantes", color=:green, ms=4)
+
+        if length(s_water_x[frame_number]) > 0
+        s_water_density_estimation = kde((s_water_x[frame_number], s_water_y[frame_number]))
+        heatmap(
+            p2, s_water_density_estimation.x, s_water_density_estimation.y, s_water_density_estimation.density',
+            color=:viridis, xlabel="X", ylabel="Y", label="Densité d'eau de surface",
+            xlims=(-2 * dom, 2 * dom), ylims=(-2 * dom, 2 * dom)
+        )
+        else
+            heatmap(
+            p2, [-2 * dom, 2 * dom], [-2 * dom, 2 * dom], fill(0.0, 2, 2)',
+            color=:viridis, xlabel="X", ylabel="Y", label="Densité d'eau dans le sol",
+            xlims=(-2 * dom, 2 * dom), ylims=(-2 * dom, 2 * dom)
+            )
+        end
+
+        plot(p1, p2, layout=(1, 2), size=(1200, 400))
     end
     return anim
 end
 
+
 @load "generated/plants_ts.jld2" plants_x_ts plants_y_ts
-@load "generated/ground_water_ts.jld2" g_water_x_ts g_water_y_ts
-@load "generated/surface_water_ts.jld2" s_water_x_ts s_water_y_ts
-
-labels = ["Plante", "Eau de sous-sol", "Eau de surface"]  # Légendes pour chaque type
-base_colors = [:green, :blue, :red]  # Couleurs associées à chaque type
+# @load "generated/ground_water_ts.jld2" g_water_x_ts g_water_y_ts
+# @load "generated/surface_water_ts.jld2" s_water_x_ts s_water_y_ts
 
 
-# Grille pour affichage
-min_x, max_x = minimum(plants_x_ts[1]), maximum(plants_x_ts[1])
-min_y, max_y = minimum(plants_y_ts[1]), maximum(plants_y_ts[1])
-
-density_estimation = kde((plants_x_ts[1], plants_y_ts[1]))
-
-p = heatmap(density_estimation.x, density_estimation.y, density_estimation.density', color=:plasma, xlabel="X", ylabel="Y", title="Densité spatiale (KDE)",
-                xlims=(min_x, max_x), ylims=(min_y, max_y))
-scatter!(p, plants_x_ts[1], plants_y_ts[1], xlabel="X", ylabel="Y", color=:green)
-
-display(p)
+# Création de l'animation
+# anim = animates_plants([plants_x_ts, plants_y_ts], 2, 10)
+anim = create_animation([plants_x_ts[1:500], g_water_x_ts[1:500], s_water_x_ts[1:500]], [plants_y_ts[1:500], g_water_y_ts[1:500], s_water_y_ts[1:500]], 2, 5)
+println("ANIMATION CREATED")
+gif(anim, "figures/animations/density.gif", fps=10)
+println("ANIMATION SAVED")
