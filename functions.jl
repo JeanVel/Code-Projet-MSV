@@ -457,32 +457,6 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 end
 
 
-using Plots
-
-
-
-function create_density_animation(positions_x, positions_y, dom, grid_size, frame_step=5)
-    anim = @animate for frame_number in 1:frame_step:size(positions_x, 1)
-        p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Densité des particules")
-        scatter!(
-            positions_x[frame_number, 1], 
-            positions_y[frame_number, 1],
-            label="Particules 1", 
-            color=:blue, 
-            ms=4,  # Taille des marqueurs
-            legend=:topright
-        )
-        
-        for i in 2:3  # Boucle sur les particules eau de surface et eau de sous-sol
-            x_grid, y_grid, density = spatial_density(positions_x[frame_number, i], positions_y[frame_number, i], grid_size)
-            heatmap!(x_grid, y_grid, density, color=:viridis, alpha=0.6, label="Densité des particules $i")
-        end
-        p
-    end
-    return anim
-end
-
-
 function plot_particles_over_time(nb_particles, times, labels, base_colors)
     particles_over_time = plot(xlabel="Temps", ylabel="Nombre de particules", legend=:topright)
 
