@@ -6,6 +6,7 @@ using Distributions
 using Random
 using Pkg
 using StatsBase
+using KernelDensity
 
 
 function simulate_particles(n_particles, T, dt, X0, Y0, chi, L, eps=1e-4)
@@ -276,8 +277,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
     morts_Y = 0
     morts_Z = 0
 
-    #simule un processus de poisson d'intensité P entre 0 et T, on stocke les instants dans une liste : 
-    raining_times = simulate_poisson_process(P, T) #Particules de pluie qui tombent 
+    # Simule un processus de poisson d'intensité P entre 0 et T, on stocke les instants dans une liste : 
+    raining_times = simulate_poisson_process(P, T) # Particules de pluie qui tombent
     
     while niter < N_max && t < T
         
@@ -291,10 +292,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
         tau_y = rand(Exponential(1 / ( C[3] * NY_t )))
         tau_z = rand(Exponential(1 / ( C[4] * NZ_t )))
         
-
         tau=min(tau_xb,tau_xd,tau_y,tau_z) # pas de temps
         Zxb , Zxd, Zy, Zz = rand(),rand(),rand(), rand()
-
 
         if NX_t == 0 
             println("Plus de plantes")
@@ -460,18 +459,23 @@ end
 
 using Plots
 
-function create_animation(positions_x, positions_y, dom, labels, base_colors, frame_step=5)
+
+
+function create_density_animation(positions_x, positions_y, dom, grid_size, frame_step=5)
     anim = @animate for frame_number in 1:frame_step:size(positions_x, 1)
-        p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Simulation de particules")
-        for i in 1:3  # Boucle sur les trois types de particules
-            scatter!(
-                positions_x[frame_number, i], 
-                positions_y[frame_number, i],
-                label=labels[i], 
-                color=base_colors[i], 
-                ms=4,  # Taille des marqueurs
-                legend=:topright
-            )
+        p = plot(legend=:topright, xlim=(-2*dom, 2*dom), ylim=(-2*dom, 2*dom), xlabel="x", ylabel="y", title="Densité des particules")
+        scatter!(
+            positions_x[frame_number, 1], 
+            positions_y[frame_number, 1],
+            label="Particules 1", 
+            color=:blue, 
+            ms=4,  # Taille des marqueurs
+            legend=:topright
+        )
+        
+        for i in 2:3  # Boucle sur les particules eau de surface et eau de sous-sol
+            x_grid, y_grid, density = spatial_density(positions_x[frame_number, i], positions_y[frame_number, i], grid_size)
+            heatmap!(x_grid, y_grid, density, color=:viridis, alpha=0.6, label="Densité des particules $i")
         end
         p
     end
@@ -513,4 +517,46 @@ function get_image_from_positions(positions_x, positions_y)
     )
 
     return p
+end
+
+
+function ripley_k(points, distances, area)
+    n = size(points, 1)
+    K = zeros(length(distances))
+    
+    for (i, d) in enumerate(distances)
+        count = 0
+        for j in 1:n
+            for k in 1:n
+                if j != k
+                    dist = norm(points[j, :] .- points[k, :])
+                    if dist <= d
+                        count += 1
+                    end
+                end
+            end
+        end
+        K[i] = sqrt((area / (n * (n - 1))) * count) - d
+        
+    end
+    
+    return K
+end
+
+
+function k_confidence_interval(n_points, distances, n_rep)
+    K_values = zeros(n_rep, length(distances))
+
+    for i in 1:n_rep
+        points = [rand(2) for _ in 1:n_points]
+        K_values[i, :] = ripley_k(hcat(points...)', distances, 1.0)
+    end
+    
+    K_mean = mean(K_values, dims=1)
+    K_std = std(K_values, dims=1)
+    
+    K_upper = K_mean .+ 1.96 .* K_std
+    K_lower = K_mean .- 1.96 .* K_std
+    
+    return K_mean[1, :], K_upper[1, :], K_lower[1, :]
 end
