@@ -96,7 +96,7 @@ display(s)
 
 p = plot(distances, k_values, xlabel="s", ylabel="K(s)", label="Écosystème", lw=2, color=:blue)
 plot!(p,
-    distances, spatial_random_k, label="CSR", color=:green, alpha=1, lw=2,
+    distances, spatial_random_k, label="Zone neutre", color=:green, alpha=1, lw=2,
     ribbon=(upper_k .- spatial_random_k, spatial_random_k .- lower_k), fillalpha=0.2
     )
 plot!(p, distances, pi * distances.^2, label="K(d) = π d²", lw=2, linestyle=:dash, color=:red)
