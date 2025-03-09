@@ -468,7 +468,7 @@ end
 
 
 function plot_plants_over_time(nb_plants, times, color=:green)
-    plant_over_time = plot(xlabel="temps", ylabel="Nombre de particules de plantes",legend=:none)
+    plant_over_time = plot(xlabel="Temps", ylabel="Nombre de particules de plantes",legend=:none)
     plot!(plant_over_time, times, nb_plants, color=color, lw=2)
 
     return plant_over_time

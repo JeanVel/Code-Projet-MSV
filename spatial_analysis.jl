@@ -53,6 +53,8 @@ end
 
 plants_x, plants_y = plants_x_ts[end], plants_y_ts[end]
 
+rayon_infiltration = 0.5
+
 plants_points = zeros(size(plants_x)[1], 2)
 plants_points = hcat(plants_x, plants_y)
 println(plants_points[1, :])
@@ -74,12 +76,28 @@ k_values = ripley_k(plants_points, distances, domain)
 n_rep = 100
 spatial_random_k, upper_k, lower_k = k_confidence_interval(n_plants, distances, domain, n_rep)
 
-s = scatter(plants_x, plants_y, label="Plantes", color=:green, markersize=4)
+s = scatter(plants_x_ts[1], plants_y_ts[1], label="Plantes", color=:green, markersize=4, title="Répartition des plantes au début de la simulation")
 display(s)
 
-plot(distances, k_values, xlabel="s", ylabel="K(s)", label="Écosystème", lw=2, color=:blue)
-plot!(
+s = scatter(plants_x, plants_y, label="Plantes", color=:green, markersize=4, title="Répartition des plantes à la fin de la simulation")
+# Ajout des cercles autour des plantes
+for (x, y) in zip(plants_x, plants_y)
+    plot!(s, 
+        [x .+ rayon_infiltration * cos.(LinRange(0, 2π, 50))], 
+        [y .+ rayon_infiltration * sin.(LinRange(0, 2π, 50))], 
+        fill=(true, 0.1), 
+        lw=0, 
+        color=:green, 
+        label=false  # Pas de légende pour les cercles
+    )
+end
+display(s)
+
+
+p = plot(distances, k_values, xlabel="s", ylabel="K(s)", label="Écosystème", lw=2, color=:blue)
+plot!(p,
     distances, spatial_random_k, label="CSR", color=:green, alpha=1, lw=2,
     ribbon=(upper_k .- spatial_random_k, spatial_random_k .- lower_k), fillalpha=0.2
     )
-plot!(distances, pi * distances.^2, label="K(d) = π d²", lw=2, linestyle=:dash, color=:red)
+plot!(p, distances, pi * distances.^2, label="K(d) = π d²", lw=2, linestyle=:dash, color=:red)
+savefig("figures/graphiques/Scénarios/ripley_k_plot.png")
