@@ -4,7 +4,6 @@ using LinearAlgebra
 using Plots
 using Distributions
 using Random
-using Pkg
 using StatsBase
 using KernelDensity
 

@@ -12,7 +12,7 @@ using JLD2
 
 
 # Paramètres de simulation :
-N_max = 20  # nombre d'itérations de la simulation
+N_max = 200  # nombre d'itérations de la simulation
 T = 100.0  # Temps de simulation
 dom = 2.0  # Domaine de simulation
 
@@ -73,7 +73,6 @@ nb_particles = [nb_plants, nb_ground_water, nb_surface_water]
 
 println("Nombre de points temporels : ", length(times))
 
-
 particles_over_time = plot_particles_over_time(nb_particles, times, labels, base_colors)
 display(particles_over_time)
 #savefig(particles_over_time, "figures/graphiques/particles_over_time.png")
@@ -81,13 +80,9 @@ display(particles_over_time)
 plant_over_time = plot_plants_over_time(nb_plants, times)
 display(plant_over_time)
 
-# Sauvegarde de la série temporelle
+# Sauvegarde de la série temporelle du nombre de plantes au cours du temps
 npzwrite("generated/plants_timeserie.npz", nb_plants)
 
-
-# Création de l'animation
-#anim = create_animation(positions_x, positions_y, dom, labels, base_colors, 3)
-#gif(anim, "figures/animations/tests.gif", fps=35)
 
 # Ne pas sauvegarder si jamais la simulation se termine par la mort de toutes les plantes
 if length(plants_x_ts[end]) > 0
