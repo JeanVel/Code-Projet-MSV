@@ -12,7 +12,7 @@ using JLD2
 
 
 # Fixe la graine aléatoire pour la reproductibilité
-Random.seed!(1234)
+Random.seed!(42)
 
 # Paramètres de simulation :
 N_max = 30000  # nombre d'itérations de la simulation
@@ -25,21 +25,27 @@ NZ_0 = 0  # Nombre initial de particules Z
 
 diff = [0.001, 0.8, 3] # Coefficients diffusion pour chaque type de particules
 
-lamb = 0.35  # Paramètre de mort naturelle des plantes
-K = 1  # Capacité de charge du milieu pour les plantes
-
-upper_bound = 175.
+lamb = 0.1  # Paramètre de mort naturelle des plantes
+K = 15  # Capacité de charge du milieu pour les plantes
 
 P = 5.5  # Intensité du processus de Poisson simulant les événements de pluie
 raining_intensity = 100  # Nombre de particules d'eau de surface ajoutées par un événement de pluie
 
-L = 1.4  # Paramètre d'évaporation
-C = [lamb + 10., 15 , L + 10, upper_bound]  # Majorants de l'intensité du processus de poisson
+evaporation = 0.1  # Taux d'évaporation de l'eau de sous-sol
+evaporation_surface = 3.
+evaporations = [evaporation, evaporation_surface]
 
-r_plant_influence = 0.5  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
+upperbound_plant_birth = 3  # plus la valeur est grande, moins l'événement "naissance d'une plante" sera favorisé 
+upperbound_plant_death = 6.  # plus la valeur est grande, moins l'événement "mort d'une plante" sera favorisé
+upperbound_gwater = 3.  # plus la valeur est grande, moins l'événement "mort eau de sous-sol" l'eau" sera favorisé
+upperbound_swater = 130.  # plus la valeur est grande, moins l'événement "infiltration de l'eau" sera favorisé
+C = [upperbound_plant_birth, upperbound_plant_death, upperbound_gwater, upperbound_swater]  # Majorants de l'intensité du processus de poisson
+
+r_plant_influence = 3.0  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
+scale = r_plant_influence / dom
 r_plant_birth = 0.3  # Rayon du cercle dans lequel une plante fille est créée autour d'une plante mère 
 
-I_parameters = [200, 10]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
+I_parameters = [50, 2]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
 
 # Initialisation des positions
 X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
@@ -49,7 +55,7 @@ X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
 X0 = [X_x0 ,Y_x0, Z_x0]
 Y0 = [X_y0 ,Y_y0, Z_y0]
 
-sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_parameters, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
+sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporations, I_parameters, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
 plants_x_ts, plants_y_ts, g_water_x_ts, g_water_y_ts, s_water_x_ts, s_water_y_ts, niter, last_time, naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z = sim_plant
 
 

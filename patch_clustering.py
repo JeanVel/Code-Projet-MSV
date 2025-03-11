@@ -34,7 +34,7 @@ plt.colorbar(label="Cluster ID")
 plt.title(f"Clustering DBSCAN - {n_clusters} clusters détectés")
 plt.xlabel(r"$X$", size=14)
 plt.ylabel(r"$Y$", size=14)
-plt.savefig("figures/graphiques/Scénarios/2/patchs_clustering.png")
+plt.savefig("figures/graphiques/Scénarios/2.1/patchs_clustering.png")
 
 # Tracer l'histogramme du nombre de clusters en fonction de leur taille
 # plt.figure()

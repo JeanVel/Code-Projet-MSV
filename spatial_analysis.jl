@@ -57,8 +57,6 @@ rayon_infiltration = 0.5
 
 plants_points = zeros(size(plants_x)[1], 2)
 plants_points = hcat(plants_x, plants_y)
-println(plants_points[1, :])
-println(plants_points[1])
 
 n_plants = size(plants_x)[1]
 println("Nombre de plantes dans l'écosystème = ", n_plants)
@@ -83,4 +81,4 @@ plot!(p,
     )
 plot!(p, distances, pi * distances.^2, label="K(d) = π d²", lw=2, linestyle=:dash, color=:red)
 display(p)
-savefig("figures/graphiques/Scénarios/2/ripley_k_plot.png")
+savefig("figures/graphiques/Scénarios/2.1/ripley_k_plot.png")

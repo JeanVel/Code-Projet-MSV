@@ -251,7 +251,7 @@ function competition(plant_density, K)
 end
 
 ### Z = eau surface , Y = eau sous sol , X = plante
-function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
+function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporation, I_param, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
     # Initialisation des positions des particules
     
     #particules X :
@@ -291,8 +291,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_
         tau_y = rand(Exponential(1 / ( C[3] * NY_t )))
         tau_z = rand(Exponential(1 / ( C[4] * NZ_t )))
         
-        tau=min(tau_xb,tau_xd,tau_y,tau_z) # pas de temps
-        Zxb , Zxd, Zy, Zz = rand(),rand(),rand(), rand()
+        tau=min(tau_xb,tau_xd, tau_y, tau_z) # pas de temps
+        Zxb, Zxd, Zy, Zz = rand(), rand(), rand(), rand()
 
         if NX_t == 0 
             println("Plus de plantes")
@@ -327,8 +327,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_
         push!(positions_Zx, new_Zx)
         push!(positions_Zy, new_Zy)
 
-        ### mort et naissance des particules Z : 
-
+        # Mort et naissance des particules eau de surface :
         is_raining = any(r_t -> t < r_t < t + tau, raining_times)
         if is_raining
             for _ in 1:raining_intensity
@@ -344,7 +343,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_
         
         # Choix de la particule Z : 
         if NZ_t != 0  # s'il reste de l'eau de surface
-            rate_vect_zd = infiltration(density_plants_around_sw, I_param[1], I_param[2])
+            rate_vect_zd = evaporation[2] .+ infiltration(density_plants_around_sw, I_param[1], I_param[2])
             I_z = sample(1:NZ_t, Weights(rate_vect_zd))
 
             rate_I_zd = rate_vect_zd[I_z]
@@ -370,10 +369,10 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_
         end 
 
 
-        ### mort et naissance de particule Y :
+        # Mort et naissance eau de sous-sol :
         
         # Densité de plantes autour des particule d'eau dans le sol -> consommation
-        rate_vect_yd=[L+density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
+        rate_vect_yd=[evaporation[1] .+ density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
         NY_t=length(positions_Yx[end])
 
         if NY_t!=0 #si il y a de l'eau en surface
@@ -392,10 +391,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_
         end 
 
         
-        ### mort et naissance de particule X :
-
-        #choix de celle qui va naitre : 
-
+        # Mort et naissance des plantes
+        # Naissance 
         # Densité de plantes autour des particules d'eau de surface -> consommation
         if NX_t != 0 
             gw_density_around_plants=[density(x,y,positions_Yx[end], positions_Yy[end], r_plant_influence) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
