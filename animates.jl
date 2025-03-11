@@ -126,6 +126,29 @@ function animates_ecosystem(positions_x, position_y, dom, frame_step)
 end
 
 
+function animates_ecosystem_particles(positions_x, positions_y, dom, frame_step)
+    plants_x, plants_y = positions_x[1], positions_y[1]
+    g_water_x, g_water_y = positions_x[2], positions_y[2]
+    s_water_x, s_water_y = positions_x[3], positions_y[3]
+
+    frame_number = length(g_water_x)
+
+    anim = @animate for frame_number in 1:frame_step:frame_number
+        p = plot(
+            xlim=(-2 * dom, 2 * dom), ylim=(-2 * dom, 2 * dom),
+            xlabel="x", ylabel="y", title="Simulation des particules de l'écosystème",
+            legend=:topright
+        )
+
+        scatter!(p, plants_x[frame_number], plants_y[frame_number], label="Plantes", color=:green, ms=4)
+        scatter!(p, g_water_x[frame_number], g_water_y[frame_number], label="Eau de sous-sol", color=:blue, ms=4)
+        scatter!(p, s_water_x[frame_number], s_water_y[frame_number], label="Eau de surface", color=:cyan, ms=4)
+    end
+
+    return anim
+end
+
+
 @load "generated/plants_ts.jld2" plants_x_ts plants_y_ts
 @load "generated/ground_water_ts.jld2" g_water_x_ts g_water_y_ts
 @load "generated/surface_water_ts.jld2" s_water_x_ts s_water_y_ts
@@ -135,7 +158,8 @@ end
 # anim = animates_plants([plants_x_ts, plants_y_ts], 2, 10)
 # anim = animates_g_water_density([g_water_x_ts[400:600], g_water_y_ts[400:600]], 2, 10)
 # anim = animates_plants_and_g_water_density([plants_x_ts[400:600], plants_y_ts[400:600]], [g_water_x_ts[400:600], g_water_y_ts[400:600]], 2, 10)
-anim = animates_ecosystem([plants_x_ts[400:600], g_water_x_ts[400:600], s_water_x_ts[400:600]], [plants_y_ts[400:600], g_water_y_ts[400:600], s_water_y_ts[400:600]], 2, 5)
+# anim = animates_ecosystem([plants_x_ts[7500:end], g_water_x_ts[7500:end], s_water_x_ts[7500:end]], [plants_y_ts[7500:end], g_water_y_ts[7500:end], s_water_y_ts[7500:end]], 2, 5)
+anim = animates_ecosystem_particles([plants_x_ts, g_water_x_ts, s_water_x_ts], [plants_y_ts, g_water_y_ts, s_water_y_ts], 2, 5)
 println("ANIMATION CREATED")
 gif(anim, "figures/animations/plants_gw_density.gif", fps=10)
 println("ANIMATION SAVED")
