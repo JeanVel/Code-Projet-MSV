@@ -17,7 +17,6 @@ Random.seed!(42)
 # Paramètres de simulation :
 N_max = 30000  # nombre d'itérations de la simulation
 T = 100.0  # Temps de simulation
-dom = 2.0  # Domaine de simulation
 
 NX_0 = 100  # Nombre initial de particules X
 NY_0 = 0  # Nombre initial de particules Y
@@ -25,14 +24,14 @@ NZ_0 = 0  # Nombre initial de particules Z
 
 diff = [0.001, 0.8, 3] # Coefficients diffusion pour chaque type de particules
 
-lamb = 0.1  # Paramètre de mort naturelle des plantes
+lamb = 0.14  # Paramètre de mort naturelle des plantes
 K = 15  # Capacité de charge du milieu pour les plantes
 
-P = 5.5  # Intensité du processus de Poisson simulant les événements de pluie
+P = 1.  # Intensité du processus de Poisson simulant les événements de pluie
 raining_intensity = 100  # Nombre de particules d'eau de surface ajoutées par un événement de pluie
 
-evaporation = 0.1  # Taux d'évaporation de l'eau de sous-sol
-evaporation_surface = 3.
+evaporation = 1.  # Taux d'évaporation de l'eau de sous-sol
+evaporation_surface = 10.
 evaporations = [evaporation, evaporation_surface]
 
 upperbound_plant_birth = 3  # plus la valeur est grande, moins l'événement "naissance d'une plante" sera favorisé 
@@ -41,21 +40,28 @@ upperbound_gwater = 3.  # plus la valeur est grande, moins l'événement "mort e
 upperbound_swater = 130.  # plus la valeur est grande, moins l'événement "infiltration de l'eau" sera favorisé
 C = [upperbound_plant_birth, upperbound_plant_death, upperbound_gwater, upperbound_swater]  # Majorants de l'intensité du processus de poisson
 
-r_plant_influence = 3.0  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
-scale = r_plant_influence / dom
-r_plant_birth = 0.3  # Rayon du cercle dans lequel une plante fille est créée autour d'une plante mère 
+domain = 2.
+influence_scale = 0.25
+r_plant_influence = domain * influence_scale  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
+println("Rayon d'influence des plantes = ", r_plant_influence)
+
+birth_scale = 0.15
+r_plant_birth = domain * birth_scale  # Rayon du cercle dans lequel une plante fille est créée autour d'une plante mère 
+println("Rayon de naissance des plantes = ", r_plant_birth)
 
 I_parameters = [50, 2]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
 
 # Initialisation des positions
-X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
-# X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, -1), 0.5)
-# X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = two_circular_patch_initialization(NX_0, NY_0, NZ_0, (-1, 1), (1, -1), 0.5, 0.5)
+X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, domain)
+# X_x0, Y_x0 = multiple_circular_patch_initialization(800, 40, 2, 50)
+
+s = scatter(X_x0, Y_x0, label="Plantes", color=:green, markersize=4, title="Répartition initiale des plantes")
+display(s)
 
 X0 = [X_x0 ,Y_x0, Z_x0]
 Y0 = [X_y0 ,Y_y0, Z_y0]
 
-sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporations, I_parameters, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
+sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporations, I_parameters, C, r_plant_influence, r_plant_birth, diff, domain, N_max, T)
 plants_x_ts, plants_y_ts, g_water_x_ts, g_water_y_ts, s_water_x_ts, s_water_y_ts, niter, last_time, naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z = sim_plant
 
 
@@ -98,7 +104,9 @@ if length(plants_x_ts[end]) > 0
     npzwrite("generated/plants_last_y_positions.npz", plants_y_ts[end])
 
     # Affichage état écosystème
-    s = scatter(plants_x_ts[end], plants_y_ts[end], label="Plantes", color=:green, markersize=4, title="Répartition des plantes à la fin de la simulation")
+    s = scatter(plants_x_ts[end], legend=:topright, plants_y_ts[end], label="Plantes", color=:green, markersize=4, title="Répartition des plantes à la fin de la simulation")
+    display_epsilon = 0.1
+
     for (x, y) in zip(plants_x_ts[end], plants_y_ts[end])
         plot!(s, 
             [x .+ r_plant_influence * cos.(LinRange(0, 2π, 50))], 
@@ -108,8 +116,8 @@ if length(plants_x_ts[end]) > 0
             color=:green, 
             label=false  # Pas de légende pour les cercles
         )
-        xlims!(-2 * dom, 2 * dom)
-        ylims!(-2 * dom, 2 * dom)
     end
+    xlims!(minimum(plants_x_ts[end]) - display_epsilon, maximum(plants_x_ts[end]) + display_epsilon)
+    ylims!(minimum(plants_y_ts[end]) - display_epsilon, maximum(plants_y_ts[end]) + display_epsilon)
     display(s)
 end
