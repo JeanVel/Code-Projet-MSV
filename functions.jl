@@ -8,49 +8,6 @@ using StatsBase
 using KernelDensity
 
 
-function simulate_particles(n_particles, T, dt, X0, Y0, chi, L, eps=1e-4)
-    n_steps = Int(T / dt)
-    sqrt_2_dt = sqrt(2 * dt)
-    N = n_particles
-    
-    # Initialisation des positions
-    positions_x = zeros(Float64, n_steps, n_particles)
-    positions_y = zeros(Float64, n_steps, n_particles)
-    positions_x[1, :] .= X0
-    positions_y[1, :] .= Y0
-    
-    for t in 2:n_steps
-        # Incréments brownien pour chaque particule en x et y
-        dB_x = sqrt_2_dt * randn(n_particles)
-        dB_y = sqrt_2_dt * randn(n_particles)
-        
-        # Calcul des interactions entre les particules
-        interactions_x = zeros(Float64, n_particles)
-        interactions_y = zeros(Float64, n_particles)
-        for i in 1:n_particles
-            for j in 1:n_particles
-                if i != j
-                    # Calcul de la distance sur le tore
-                    dx = positions_x[t-1, i] - positions_x[t-1, j]
-                    dy = positions_y[t-1, i] - positions_y[t-1, j]
-                    
-                    dist_squared = dx^2 + dy^2
-                    interactions_x[i] -= (chi / (2 * π * N)) * dx / (dist_squared + eps)
-                    interactions_y[i] -= (chi / (2 * π * N)) * dy / (dist_squared + eps)
-                end
-            end
-        end
-        
-        # Mise à jour des positions avec le schéma d'Euler
-        positions_x[t, :] .= (positions_x[t-1, :] .+ dB_x .+ dt .* interactions_x) 
-        positions_y[t, :] .= (positions_y[t-1, :] .+ dB_y .+ dt .* interactions_y)
-    end
-    
-    return positions_x, positions_y
-end
-
-
-
 function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particules (peu importe le type) autour de du point (x,y) rc
     dens = 0.0
     for j in eachindex(pos_x)
@@ -70,101 +27,6 @@ function density(x,y,pos_x,pos_y,rc) #fonction qui calcule la densite de particu
     end
     return dens
 
-end
-
-
-
-function simulate_particles_bd(T, X0, Y0, chi, L, br, dr, C; eps=1e-4, rc=0.1, N_max=2000)
-    # Initialisation des positions des particules
-    positions_x = [X0]
-    positions_y = [Y0]
-    t = 0.0
-    niter = 0
-    naissances = 0
-    morts = 0
-    
-    while t < T && niter < N_max
-        niter += 1
-        Nt = length(positions_x[end])  # Nombre de particules à l'instant t
-
-        tau = rand(Exponential(1 / ((br + dr * C) * Nt)))
-        Z = rand()
-        
-        
-        I = rand(1:Nt)  # Tirage d'un indice uniforme entre 1 et Nt
-        
-        
-        
-        t += tau  # Mise à jour du temps
-
-
-        # Calcul des interactions entre les particules
-        interactions_x = zeros(Float64, Nt)
-        interactions_y = zeros(Float64, Nt)
-        for i in 1:Nt
-            for j in 1:Nt
-                if i != j
-                    dx = positions_x[end][i] - positions_x[end][j]
-                    dy = positions_y[end][i] - positions_y[end][j]
-                    dist_squared = dx^2 + dy^2
-                    interactions_x[i] -= (chi / (2 * π * Nt)) * dx / (dist_squared + eps)
-                    interactions_y[i] -= (chi / (2 * π * Nt)) * dy / (dist_squared + eps)
-                end
-            end
-        end
-
-        dB_x = sqrt(2 * tau) * randn(Nt) # Incréments browniens de taille Nt
-        dB_y = sqrt(2 * tau) * randn(Nt)
-        
-        # Mise à jour des positions avec le schéma d'Euler à l'instant t + tau
-        new_x = positions_x[end] .+ dB_x .+ tau .* interactions_x  #de taille Nt
-        new_y = positions_y[end] .+ dB_y .+ tau .* interactions_y
-
-
-        #on ajoute les nouvelles positions à la liste
-        push!(positions_x, new_x)
-        push!(positions_y, new_y)
-
-    
-        #Calcul de la densité autour de chaque particule dans un rayon rc: 
-
-        dens=[density(x,y,positions_x[end], positions_y[end],rc) for (x,y) in zip(positions_x[end],positions_y[end])]
-        
-        # Choix de la particule I selon le vecteur de densité renormalisé : 
-        I = sample(1:Nt, Weights(dens))
-
-        a = br / (br + dr * C)
-        b = a + (dr * dens[I]) / (br + dr * C)
-
-        if b >= 1
-            println("Erreur : b > 1, choisissez un meilleur majorant C.")
-            break
-        end
-
-        if Z <= a  # Naissance
-            # naissance d'une particule à une distance rc coté de la particule I 
-            r = rc * sqrt(rand())
-            theta = 2 * π * rand()
-            x_new = new_x[I] + r * cos(theta)
-            y_new = new_y[I] + r * sin(theta)
-            push!(positions_x[end], x_new)
-            push!(positions_y[end], y_new)
-
-
-            naissances += 1
-
-        elseif Z > a && Z <= b  # Mort
-            # Supprimer la particule I
-            deleteat!(positions_x[end], I)
-            deleteat!(positions_y[end], I)
-            morts += 1
-        end
-
-
-    end
-
-    # Retour des résultats
-    return positions_x, positions_y, naissances, morts, niter
 end
 
 
@@ -241,6 +103,53 @@ function two_circular_patch_initialization(nb_plant_particles, nb_gw_particles, 
 end
 
 
+function place_particle_in_radius_around_center(center, radius)
+    angle = rand(Uniform(0, 2 * pi))
+    r = radius * rand()
+    x = center[1] + r * cos(angle)
+    y = center[2] + r * sin(angle)
+
+    return x, y
+end
+
+
+function multiple_circular_patch_initialization(n_particles, n_patches, r_influence, L)
+    # Compute the number of patches per row and column
+    patches_per_row = ceil(Int, sqrt(n_patches))
+    println("Patches per row = ", patches_per_row)
+    patches_per_col = ceil(Int, n_patches / patches_per_row)
+    println("Patches per column = ", patches_per_col)
+
+    particles_per_patch = n_particles ÷ n_patches
+
+    # Compute the spacing between patches
+    x_spacing = L / patches_per_row
+    y_spacing = L / patches_per_col
+
+    epsilon = 0.1  # Small value to not place the patches on the border
+
+    # Initialize arrays to store particle positions
+    all_x = Float64[]
+    all_y = Float64[]
+    
+    for i in 1:patches_per_row
+        for j in 1:patches_per_col
+            center_x = epsilon + i * x_spacing
+            center_y = epsilon + j * y_spacing
+
+            # Distribute particle among patch
+            for _ in 1:particles_per_patch
+                x, y = place_particle_in_radius_around_center([center_x, center_y], r_influence)
+                push!(all_x, x)
+                push!(all_y, y)
+            end
+        end
+    end
+
+    return all_x, all_y
+end
+
+
 function infiltration(plant_density, slope, intercept)
     return slope .* plant_density .+ intercept
 end
@@ -248,6 +157,12 @@ end
 
 function competition(plant_density, K)
     return plant_density ./ K
+end
+
+function create_domain(xs, ys)
+    max_x_distance = maximum(xs) - minimum(xs)
+    max_y_distance = maximum(ys) - minimum(ys)
+    return [max_x_distance, max_y_distance]
 end
 
 ### Z = eau surface , Y = eau sous sol , X = plante
@@ -330,9 +245,10 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporation, I_pa
         # Mort et naissance des particules eau de surface :
         is_raining = any(r_t -> t < r_t < t + tau, raining_times)
         if is_raining
+            plant_domain = create_domain(positions_Xx[end], positions_Xy[end])  # pluie autour des plantes restantes
             for _ in 1:raining_intensity
-                push!(positions_Zx[end], rand() .* 2*dom .- dom)
-                push!(positions_Zy[end], rand() .* 2*dom .- dom)
+                push!(positions_Zx[end], rand() * plant_domain[1]/2 - plant_domain[1]/2)
+                push!(positions_Zy[end], rand() * plant_domain[2]/2 - plant_domain[2]/2)
             end
         end
 
@@ -464,64 +380,4 @@ function plot_plants_over_time(nb_plants, times, color=:green)
     plot!(plant_over_time, times, nb_plants, color=color, lw=2)
 
     return plant_over_time
-end
-
-
-function get_image_from_positions(positions_x, positions_y)
-    min_x = minimum(positions_x[end])
-    max_x = maximum(positions_x[end])
-    min_y = minimum(positions_y[end])
-    max_y = maximum(positions_y[end])
-    p = plot(xlim=(min_x, max_x), ylim=(min_y, max_y), framestyle=:none, grid=false, lenged=false, axis=false)
-    scatter!(
-    positions_x[end], 
-    positions_y[end],
-    color=:black,
-    legend=false,
-    ms=4,
-    )
-
-    return p
-end
-
-
-function ripley_k(points, distances, area)
-    n = size(points, 1)
-    K = zeros(length(distances))
-    
-    for (i, d) in enumerate(distances)
-        count = 0
-        for j in 1:n
-            for k in 1:n
-                if j != k
-                    dist = norm(points[j, :] .- points[k, :])
-                    if dist <= d
-                        count += 1
-                    end
-                end
-            end
-        end
-        K[i] = sqrt((area / (n * (n - 1))) * count) - d
-        
-    end
-    
-    return K
-end
-
-
-function k_confidence_interval(n_points, distances, n_rep)
-    K_values = zeros(n_rep, length(distances))
-
-    for i in 1:n_rep
-        points = [rand(2) for _ in 1:n_points]
-        K_values[i, :] = ripley_k(hcat(points...)', distances, 1.0)
-    end
-    
-    K_mean = mean(K_values, dims=1)
-    K_std = std(K_values, dims=1)
-    
-    K_upper = K_mean .+ 1.96 .* K_std
-    K_lower = K_mean .- 1.96 .* K_std
-    
-    return K_mean[1, :], K_upper[1, :], K_lower[1, :]
 end
