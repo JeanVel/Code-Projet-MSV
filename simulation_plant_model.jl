@@ -11,6 +11,9 @@ using NPZ
 using JLD2
 
 
+# Fixe la graine aléatoire pour la reproductibilité
+Random.seed!(1234)
+
 # Paramètres de simulation :
 N_max = 30000  # nombre d'itérations de la simulation
 T = 100.0  # Temps de simulation
@@ -22,22 +25,21 @@ NZ_0 = 0  # Nombre initial de particules Z
 
 diff = [0.001, 0.8, 3] # Coefficients diffusion pour chaque type de particules
 
-lamb = 0.55  # Paramètre de mort naturelle des plantes (particules X)
-K = 1  # Paramètre de saturation
+lamb = 0.35  # Paramètre de mort naturelle des plantes
+K = 1  # Capacité de charge du milieu pour les plantes
 
-upper_bound = 155.
+upper_bound = 175.
 
-P = 5.5  # Intensité du processus de Poisson simulant la pluie sur l'environnement
-raining_intensity = 100  # Nombre de particules ajoutées par un événement de pluie
+P = 5.5  # Intensité du processus de Poisson simulant les événements de pluie
+raining_intensity = 100  # Nombre de particules d'eau de surface ajoutées par un événement de pluie
 
 L = 1.4  # Paramètre d'évaporation
 C = [lamb + 10., 15 , L + 10, upper_bound]  # Majorants de l'intensité du processus de poisson
 
-rG = 2.  # Rayon de voisinage pour la densité de particules Y
-r_infiltration = 0.5  # Rayon d'influence des plantes sur l'infiltration de l'eau de surface
-rayons = [0.5, 0.1, r_infiltration]  # Rayon de voisinage pour la densité de particules X Y Z
+r_plant_influence = 0.5  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
+r_plant_birth = 0.3  # Rayon du cercle dans lequel une plante fille est créée autour d'une plante mère 
 
-I_parameters = [150, 10]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
+I_parameters = [200, 10]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
 
 # Initialisation des positions
 X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
@@ -47,7 +49,7 @@ X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, dom)
 X0 = [X_x0 ,Y_x0, Z_x0]
 Y0 = [X_y0 ,Y_y0, Z_y0]
 
-sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_parameters, C, rG, rc, diff, dom, N_max, T)
+sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_parameters, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
 plants_x_ts, plants_y_ts, g_water_x_ts, g_water_y_ts, s_water_x_ts, s_water_y_ts, niter, last_time, naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z = sim_plant
 
 
@@ -73,11 +75,11 @@ nb_particles = [nb_plants, nb_ground_water, nb_surface_water]
 
 particles_over_time = plot_particles_over_time(nb_particles, times, labels, base_colors)
 display(particles_over_time)
-savefig(particles_over_time, "figures/graphiques/Scénarios/particles_over_time.png")
+# savefig(particles_over_time, "figures/graphiques/Scénarios/particles_over_time.png")
 
 plant_over_time = plot_plants_over_time(nb_plants, times)
 display(plant_over_time)
-savefig(plant_over_time, "figures/graphiques/Scénarios/particles_over_time.png")
+# savefig(plant_over_time, "figures/graphiques/Scénarios/particles_over_time.png")
 
 # Sauvegarde de la série temporelle du nombre de plantes au cours du temps
 npzwrite("generated/plants_timeserie.npz", nb_plants)
@@ -89,13 +91,19 @@ if length(plants_x_ts[end]) > 0
     npzwrite("generated/plants_last_x_positions.npz", plants_x_ts[end])
     npzwrite("generated/plants_last_y_positions.npz", plants_y_ts[end])
 
-    # Enregistrement de la dernière frame avec juste les plantes en noir
-    plant_last_pos = get_image_from_positions(plants_x_ts, plants_y_ts)
-    # display(plant_last_pos)
-    savefig(plant_last_pos, "figures/images/plants.png")
-
-    plants_gray_img = Gray.(load("figures/images/plants.png"))  # transforme l'image en niveau de gris
-    plants_matrix = channelview(plants_gray_img)  # transforme l'image en matrice
-
-    save("figures/images/plants.png", plants_matrix)  # sauvegarde la matrice en image
+    # Affichage état écosystème
+    s = scatter(plants_x_ts[end], plants_y_ts[end], label="Plantes", color=:green, markersize=4, title="Répartition des plantes à la fin de la simulation")
+    for (x, y) in zip(plants_x_ts[end], plants_y_ts[end])
+        plot!(s, 
+            [x .+ r_plant_influence * cos.(LinRange(0, 2π, 50))], 
+            [y .+ r_plant_influence * sin.(LinRange(0, 2π, 50))],
+            fill=(true, 0.1), 
+            lw=0, 
+            color=:green, 
+            label=false  # Pas de légende pour les cercles
+        )
+        xlims!(-2 * dom, 2 * dom)
+        ylims!(-2 * dom, 2 * dom)
+    end
+    display(s)
 end

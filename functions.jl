@@ -251,7 +251,7 @@ function competition(plant_density, K)
 end
 
 ### Z = eau surface , Y = eau sous sol , X = plante
-function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG, rc, diff, dom, N_max, T)
+function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, r_plant_influence, r_plant_birth, diff, dom, N_max, T)
     # Initialisation des positions des particules
     
     #particules X :
@@ -339,9 +339,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 
         NZ_t = length(positions_Zx[end])  # mise à jour du nombre de particules d'eau de surface (Z)
 
-
-        # densité de plantes autour des particule eau de surface Z  dans un rayon rc[3]
-        density_plants_around_sw = [density(x, y, positions_Xx[end], positions_Xy[end], rc[3]) for (x,y) in zip(positions_Zx[end], positions_Zy[end])]
+        # Densité de plantes autour des particules d'eau de surface -> infiltration
+        density_plants_around_sw = [density(x, y, positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Zx[end], positions_Zy[end])]
         
         # Choix de la particule Z : 
         if NZ_t != 0  # s'il reste de l'eau de surface
@@ -349,11 +348,10 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             I_z = sample(1:NZ_t, Weights(rate_vect_zd))
 
             rate_I_zd = rate_vect_zd[I_z]
-            b_z=rate_I_zd/C[4]
+            b_z = rate_I_zd / C[4]
         
             if b_z >= 1
-                println("Erreur : b > 1, choisissez un meilleur majorant C4.")
-                break
+                error("Erreur : b > 1, choisissez un meilleur majorant C4.")
             end
 
             if Zz <= b_z  # Mort
@@ -374,8 +372,8 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 
         ### mort et naissance de particule Y :
         
-        #densite de plantes autour des particule Y (eau surface) dans un rayon rG
-        rate_vect_yd=[L+density(x,y,positions_Xx[end], positions_Xy[end],rG) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
+        # Densité de plantes autour des particule d'eau dans le sol -> consommation
+        rate_vect_yd=[L+density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
         NY_t=length(positions_Yx[end])
 
         if NY_t!=0 #si il y a de l'eau en surface
@@ -383,8 +381,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             rate_I_yd = rate_vect_yd[I_y]
             b_y= rate_I_yd/C[3]
             if b_y >= 1
-                println("Erreur : b > 1, choisissez un meilleur majorant C3.")
-                break
+                error("Erreur : b > 1, choisissez un meilleur majorant C3.")
             end
             if Zy <= b_y  # Mort
                 # Supprimer la particule I_y
@@ -399,19 +396,18 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
 
         #choix de celle qui va naitre : 
 
-        #densite de Y (eau sous sol) autour des X (plantes) dans un rayon rG
+        # Densité de plantes autour des particules d'eau de surface -> consommation
         if NX_t != 0 
-            gw_density_around_plants=[density(x,y,positions_Yx[end], positions_Yy[end],rG) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
+            gw_density_around_plants=[density(x,y,positions_Yx[end], positions_Yy[end], r_plant_influence) for (x,y) in zip(positions_Xx[end],positions_Xy[end])]
             if sum(gw_density_around_plants) != 0 
                 I_xb = sample(1:NX_t, Weights(gw_density_around_plants))
                 b_xb = gw_density_around_plants[I_xb] / C[1]
                 if b_xb >= 1
-                    println("Erreur : b > 1, choisissez un meilleur majorant C1.")
-                    break
+                    error("Erreur : b > 1, choisissez un meilleur majorant C1.")
                 end
                 if Zxb <= b_xb  # Naissance
-                    # naissance d'une particule à coté de la particule I_xb
-                    r = rc[1] * sqrt(rand())
+                    # naissance d'une plante dans un rayon r_plant_birth autour de la plante mère
+                    r = r_plant_birth * sqrt(rand())
                     theta = 2 * π * rand()
                     x_new = positions_Xx[end][I_xb] + r * cos(theta)
                     y_new = positions_Xy[end][I_xb] + r * sin(theta)
@@ -422,19 +418,18 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, L, I_param, C, rG
             end 
 
             NX_t=length(positions_Xx[end])
-            #choix de celle qui va mourir : 
 
-             
-            gw_density_around_plants = [density(x,y,positions_Yx[end], positions_Yy[end], rG) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
-            plant_density_around_plants = [density(x,y,positions_Xx[end], positions_Xy[end], rc[1]) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
+            # Choix de celle qui va mourir : 
+            
+            # Densité de plantes autour des plantes  -> compétition
+            plant_density_around_plants = [density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Xx[end], positions_Xy[end])]
             
             rate_vect_xd = lamb .+ competition(plant_density_around_plants, K)
             if sum(rate_vect_xd) !=0 
                 I_xd=sample(1:NX_t, Weights(rate_vect_xd))
-                b_xd=  rate_vect_xd[I_xd]/C[2]
+                b_xd = rate_vect_xd[I_xd] / C[2]
                 if b_xd >= 1
-                    println("Erreur : b > 1, choisissez un meilleur majorant C2.")
-                    break
+                    error("Erreur : b > 1, choisissez un meilleur majorant C2.")
                 end 
                 if Zxd <= b_xd  # Mort
                     # Supprimer la particule I_xd

@@ -28,28 +28,26 @@ print(f"Nombre de clusters détectés : {n_clusters}")
 print(f"Taille de chaque cluster : {counts}")
 
 # Tracer le nuage de points avec les clusters
-# Tracer le nuage de points avec les clusters
 plt.figure()
 plt.scatter(x, y, c=labels, cmap='viridis', edgecolor='k')
 plt.colorbar(label="Cluster ID")
 plt.title(f"Clustering DBSCAN - {n_clusters} clusters détectés")
 plt.xlabel(r"$X$", size=14)
 plt.ylabel(r"$Y$", size=14)
-plt.savefig("figures/graphiques/Scénarios/patchs_clustering.png")
-plt.show()
+plt.savefig("figures/graphiques/Scénarios/2/patchs_clustering.png")
 
 # Tracer l'histogramme du nombre de clusters en fonction de leur taille
-plt.figure()
-plt.hist(counts, edgecolor='k')
-plt.xlabel("Taille des patchs", size=14)
-plt.ylabel("Nombre de patchs", size=14)
-plt.savefig("figures/graphiques/Scénarios/histogramme_taille_clusters.png")
-plt.show()
+# plt.figure()
+# plt.hist(counts, edgecolor='k')
+# plt.xlabel("Taille des patchs", size=14)
+# plt.ylabel("Nombre de patchs", size=14)
+# plt.savefig("figures/graphiques/Scénarios/histogramme_taille_clusters.png")
+# plt.show()
 
-# Tracer la figure du nombre de cluster en fonction de leur taille
-plt.figure()
-plt.loglog(counts, unique_labels, 'o')
-plt.xlabel("Taille des patchs", size=14)
-plt.ylabel("Nombre de patchs", size=14)
-plt.savefig("figures/graphiques/Scénarios/power_law.png")
-plt.show()
+# # Tracer la figure du nombre de cluster en fonction de leur taille
+# plt.figure()
+# plt.loglog(counts, unique_labels, 'o')
+# plt.xlabel("Taille des patchs", size=14)
+# plt.ylabel("Nombre de patchs", size=14)
+# plt.savefig("figures/graphiques/Scénarios/power_law.png")
+# plt.show()
