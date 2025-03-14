@@ -15,20 +15,20 @@ using JLD2
 Random.seed!(42)
 
 # Paramètres de simulation :
-N_max = 30000  # nombre d'itérations de la simulation
+N_max = 150000  # nombre d'itérations de la simulation
 T = 100.0  # Temps de simulation
 
-NX_0 = 100  # Nombre initial de particules X
+NX_0 = 1000  # Nombre initial de particules X
 NY_0 = 0  # Nombre initial de particules Y
 NZ_0 = 0  # Nombre initial de particules Z
 
 diff = [0.001, 0.8, 3] # Coefficients diffusion pour chaque type de particules
 
-lamb = 0.14  # Paramètre de mort naturelle des plantes
+lamb = 0.1  # Paramètre de mort naturelle des plantes
 K = 15  # Capacité de charge du milieu pour les plantes
 
-P = 1.  # Intensité du processus de Poisson simulant les événements de pluie
-raining_intensity = 100  # Nombre de particules d'eau de surface ajoutées par un événement de pluie
+P = 2.  # Intensité du processus de Poisson simulant les événements de pluie
+raining_intensity = 200  # Nombre de particules d'eau de surface ajoutées par un événement de pluie
 
 evaporation = 1.  # Taux d'évaporation de l'eau de sous-sol
 evaporation_surface = 10.
@@ -40,22 +40,28 @@ upperbound_gwater = 3.  # plus la valeur est grande, moins l'événement "mort e
 upperbound_swater = 130.  # plus la valeur est grande, moins l'événement "infiltration de l'eau" sera favorisé
 C = [upperbound_plant_birth, upperbound_plant_death, upperbound_gwater, upperbound_swater]  # Majorants de l'intensité du processus de poisson
 
-domain = 2.
-influence_scale = 0.25
+domain = 6
+println("Domaine de simulation = [", -domain, ", ", domain, "]²")
+influence_scale = 0.3 / domain
 r_plant_influence = domain * influence_scale  # Rayon d'influence des plantes autour d'elle --> consommation, compétition, infiltration
 println("Rayon d'influence des plantes = ", r_plant_influence)
 
-birth_scale = 0.15
+birth_scale = 1. / domain
 r_plant_birth = domain * birth_scale  # Rayon du cercle dans lequel une plante fille est créée autour d'une plante mère 
 println("Rayon de naissance des plantes = ", r_plant_birth)
 
-I_parameters = [50, 2]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
+I_parameters = [50., 2]  # pente et ordonnée à l'origine pour la fonction infiltration de l'eau
 
 # Initialisation des positions
 X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0 = init(NX_0, NY_0, NZ_0, domain)
-# X_x0, Y_x0 = multiple_circular_patch_initialization(800, 40, 2, 50)
+# X_x0, X_y0 = multiple_circular_patch_initialization(99, 9, r_plant_influence, domain)
+# Y_x0, Y_y0 = [], []
+# Z_x0, Z_y0 = [], []
 
-s = scatter(X_x0, Y_x0, label="Plantes", color=:green, markersize=4, title="Répartition initiale des plantes")
+# Sauvegarde des conditions initiales
+@save "generated/initial_conditions.jld2" X_x0 X_y0
+
+s = scatter(X_x0, X_y0, label="Plantes", color=:green, markersize=4, title="Répartition initiale des plantes")
 display(s)
 
 X0 = [X_x0 ,Y_x0, Z_x0]
@@ -63,7 +69,8 @@ Y0 = [X_y0 ,Y_y0, Z_y0]
 
 sim_plant = simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporations, I_parameters, C, r_plant_influence, r_plant_birth, diff, domain, N_max, T)
 plants_x_ts, plants_y_ts, g_water_x_ts, g_water_y_ts, s_water_x_ts, s_water_y_ts, niter, last_time, naissances_X, morts_X, naissances_Y, morts_Y, naissances_Z, morts_Z = sim_plant
-
+plants_x_ts = Vector{Vector{Float64}}(plants_x_ts)
+plants_y_ts = Vector{Vector{Float64}}(plants_y_ts)
 
 # Sauvegarde des séries temporelles des positions des particules
 @save "generated/plants_ts.jld2" plants_x_ts plants_y_ts
@@ -100,6 +107,9 @@ npzwrite("generated/plants_timeserie.npz", nb_plants)
 # Ne pas sauvegarder si jamais la simulation se termine par la mort de toutes les plantes
 if length(plants_x_ts[end]) > 0
     # Sauvegarde des dernières positions des plantes au format .npz
+    plants_x_ts[end] = Vector{Float64}(plants_x_ts[end])
+    plants_y_ts[end] = Vector{Float64}(plants_y_ts[end])
+
     npzwrite("generated/plants_last_x_positions.npz", plants_x_ts[end])
     npzwrite("generated/plants_last_y_positions.npz", plants_y_ts[end])
 

@@ -48,16 +48,16 @@ end
 
 function init(NX_0, NY_0, NZ_0, dom)
     # NX_0 particules X aléatoirement sur [dom , dom]
-    X_x0 = rand(NX_0) .* 2*dom .- dom
-    X_y0 = rand(NX_0) .* 2*dom .- dom
+    X_x0 = rand(NX_0) .* 2 * dom .- dom
+    X_y0 = rand(NX_0) .* 2 * dom .- dom
 
     # NY_0 particules Y aléatoirement sur [dom , dom]
-    Y_x0 = rand(NY_0) .* 2*dom .- dom
-    Y_y0 = rand(NY_0) .* 2*dom .- dom
+    Y_x0 = rand(NY_0) .* 2 * dom .- dom
+    Y_y0 = rand(NY_0) .* 2 * dom .- dom
 
     # NZ_0 particules Z aléatoirement sur [dom , dom]
-    Z_x0 = rand(NZ_0) .* 2*dom .- dom
-    Z_y0 = rand(NZ_0) .* 2*dom .- dom
+    Z_x0 = rand(NZ_0) .* 2 * dom .- dom
+    Z_y0 = rand(NZ_0) .* 2 * dom .- dom
 
     return X_x0, Y_x0, Z_x0, X_y0, Y_y0, Z_y0
 end
@@ -116,28 +116,27 @@ end
 function multiple_circular_patch_initialization(n_particles, n_patches, r_influence, L)
     # Compute the number of patches per row and column
     patches_per_row = ceil(Int, sqrt(n_patches))
-    println("Patches per row = ", patches_per_row)
+    println("Patches par ligne = ", patches_per_row)
     patches_per_col = ceil(Int, n_patches / patches_per_row)
-    println("Patches per column = ", patches_per_col)
-
+    println("Patches par colonne = ", patches_per_col)
     particles_per_patch = n_particles ÷ n_patches
 
     # Compute the spacing between patches
-    x_spacing = L / patches_per_row
-    y_spacing = L / patches_per_col
+    x_spacing = L / (patches_per_row - 1)
+    y_spacing = L / (patches_per_col - 1)
 
-    epsilon = 0.1  # Small value to not place the patches on the border
+    epsilon = domain * 0.1  # Small value to not place the patches on the border
 
     # Initialize arrays to store particle positions
     all_x = Float64[]
     all_y = Float64[]
     
-    for i in 1:patches_per_row
-        for j in 1:patches_per_col
-            center_x = epsilon + i * x_spacing
-            center_y = epsilon + j * y_spacing
+    for i in 0:patches_per_row-1
+        for j in 0:patches_per_col-1
+            center_x = - L + i * 2 * x_spacing
+            center_y = - L + j * 2 * y_spacing
 
-            # Distribute particle among patch
+            # Distribute particles among patch
             for _ in 1:particles_per_patch
                 x, y = place_particle_in_radius_around_center([center_x, center_y], r_influence)
                 push!(all_x, x)
@@ -157,12 +156,6 @@ end
 
 function competition(plant_density, K)
     return plant_density ./ K
-end
-
-function create_domain(xs, ys)
-    max_x_distance = maximum(xs) - minimum(xs)
-    max_y_distance = maximum(ys) - minimum(ys)
-    return [max_x_distance, max_y_distance]
 end
 
 ### Z = eau surface , Y = eau sous sol , X = plante
@@ -245,10 +238,9 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporation, I_pa
         # Mort et naissance des particules eau de surface :
         is_raining = any(r_t -> t < r_t < t + tau, raining_times)
         if is_raining
-            plant_domain = create_domain(positions_Xx[end], positions_Xy[end])  # pluie autour des plantes restantes
             for _ in 1:raining_intensity
-                push!(positions_Zx[end], rand() * plant_domain[1]/2 - plant_domain[1]/2)
-                push!(positions_Zy[end], rand() * plant_domain[2]/2 - plant_domain[2]/2)
+                push!(positions_Zx[end], rand() * 2 * dom - dom)
+                push!(positions_Zy[end], rand() * 2 * dom - dom)
             end
         end
 
@@ -288,7 +280,7 @@ function simulate_plant(X0, Y0, lamb, P, raining_intensity, K, evaporation, I_pa
         # Mort et naissance eau de sous-sol :
         
         # Densité de plantes autour des particule d'eau dans le sol -> consommation
-        rate_vect_yd=[evaporation[1] .+ density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
+        rate_vect_yd = [evaporation[1] .+ density(x,y,positions_Xx[end], positions_Xy[end], r_plant_influence) for (x,y) in zip(positions_Yx[end],positions_Yy[end])]
         NY_t=length(positions_Yx[end])
 
         if NY_t!=0 #si il y a de l'eau en surface

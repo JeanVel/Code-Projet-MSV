@@ -16,7 +16,7 @@ x, y = get_positions_from_npz(paths_positions)
 points = np.column_stack((x, y))  # Fusionner x et y en une seule liste de points (N, 2)
 
 # Appliquer DBSCAN
-db = DBSCAN(eps=0.5, min_samples=2).fit(points)  # eps : distance max entre voisins
+db = DBSCAN(eps=0.3, min_samples=2).fit(points)  # eps : distance max entre voisins
 labels = db.labels_  # Les labels des clusters (-1 signifie bruit)
 
 # Nombre de clusters
@@ -34,7 +34,18 @@ plt.colorbar(label="Cluster ID")
 plt.title(f"Clustering DBSCAN - {n_clusters} clusters détectés")
 plt.xlabel(r"$X$", size=14)
 plt.ylabel(r"$Y$", size=14)
-plt.savefig("figures/graphiques/Scénarios/2.1/patchs_clustering.png")
+plt.savefig("figures/graphiques/Scénarios/4/patchs_clustering.png")
+
+# Calculer le nombre de clusters pour chaque taille
+size_counts = np.bincount(counts)[1:]
+print(f"Nombre de clusters pour chaque taille : {size_counts}")
+
+# Tracer le scatter plot de la taille des clusters en fonction du nombre de clusters
+plt.figure()
+plt.scatter(range(len(size_counts)), size_counts, edgecolor='k')
+plt.xlabel("Taille des clusters", size=14)
+plt.ylabel("Nombre de clusters", size=14)
+plt.savefig("figures/graphiques/Scénarios/4/cluster_size_vs_count.png")
 
 # Tracer l'histogramme du nombre de clusters en fonction de leur taille
 # plt.figure()
